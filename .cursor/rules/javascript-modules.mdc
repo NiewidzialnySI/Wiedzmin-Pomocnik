@@ -1,0 +1,35 @@
+---
+description: Konwencje modułów JS w pomocniku Wiedźmin
+globs: "{js,src}/**/*.js"
+alwaysApply: false
+---
+
+# Moduły JavaScript
+
+## Eksporty
+
+- `data/*`: stałe, teksty, `map-data` — eksport nazwany; bez `document` / `localStorage`.
+- `domain/*`: funkcje czyste lub mutujące tylko przekazany stan gry; bez generowania HTML.
+- `ui/*`: zwracają string HTML lub bindują DOM na przekazanym `root`; mogą importować `icons.js`.
+- `views/*`: składają ekran, podpinają `addEventListener`; dostają `ctx` (`state`, `go`, `saveState`, `appEl`).
+
+## Importy
+
+- Zawsze ścieżki względne z rozszerzeniem `.js`.
+- Zakaz cykli: `data` nie importuje z `ui` ani `app`.
+- Wspólne escape: `ui/html.js` — nie kopiuj `escapeAttr` w widokach.
+
+## Rozmiar pliku
+
+- Cel: **&lt; 400 linii** na moduł; jeśli większy (np. setup-coach) — podfolder `views/setup/` z `coach.js`, `deals.js`.
+- Jeden `render*` na plik (wyjątek: `reference.js` dla ref/lexicon/sources).
+
+## Stan gry
+
+- Jeden obiekt `state` w `state/game-state.js`; widoki nie trzymają własnych kopii rosteru.
+- Zapis: `saveState({ immediate })` po zmianach użytkownika; nie zapisuj w każdym `mousemove`.
+
+## Bundling
+
+- Entry: `src/main.js` → `js/app.bundle.js`.
+- Do czasu pełnej migracji można edytować `js/app.js`, ale **nowy kod** idzie do `src/` zgodnie z `docs/STRUCTURE.md`.

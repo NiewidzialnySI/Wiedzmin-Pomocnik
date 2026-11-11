@@ -1,0 +1,17 @@
+---
+description: Architektura Wiedzmin-Pomocnik — gdzie co leży i jak migrować
+alwaysApply: true
+---
+
+# Wiedźmin Pomocnik — struktura
+
+- **Cel**: vanilla ES modules, SPA jednym `index.html`, polski UI, tylko podstawka gry.
+- **Źródła** (docelowo): `src/` — nie edytuj **js/app.bundle.js** (generowany buildem).
+- **Warstwy** (importy tylko w dół): `data` → `domain` → `ui` → `app` (`main.js`, router).
+- **Ekrany**: jeden plik w `src/ui/views/` na widok (`renderHome` → `home.js`); router woła `views[id](ctx)`.
+- **Plansza**: logika potworów/reputacji w `domain/`; SVG i panele w `ui/map/` — nie mieszać w jednym 1,5k-liniowym pliku.
+- **Assety**: `./img/...` z roota; backupy grafik w `img/_archive/`, nie w ścieżkach produkcyjnych.
+- **research/**: notatki audytu — zero importów z kodu gry.
+- **Zmiana JS**: po edycji uruchom `npm run build` (gdy tooling jest); aktualizuj bundle przed testem `file://`.
+- **Nowa funkcja**: najpierw wybierz warstwę; nie dopisuj do monolitu `app.js` — wyciągnij lub dodaj moduł.
+- **Pełny plan migracji**: `docs/STRUCTURE.md`.
