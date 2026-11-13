@@ -5208,6 +5208,35 @@
     { slot: 5, id: "events", name: "Zdarzenia", art: "" }
   ];
   var SETUP_EXPLORE_SLOTS = SETUP_EXPLORE_DECKS.map((d) => d.slot);
+  var SETUP_POOL_CARD_LANDSCAPE_ASPECT = 1.65;
+  function setupPoolCardSize(slotRect) {
+    const sw = Math.max(slotRect.width, 2);
+    const sh = Math.max(slotRect.height, 2);
+    let w = Math.max(32, sw);
+    let h = Math.max(14, sh);
+    if (h > w) {
+      w = Math.max(w, h * SETUP_POOL_CARD_LANDSCAPE_ASPECT);
+      h = w / SETUP_POOL_CARD_LANDSCAPE_ASPECT;
+    } else if (w / h < 1.35) {
+      h = w / SETUP_POOL_CARD_LANDSCAPE_ASPECT;
+    }
+    return { w, h };
+  }
+  function setupCoachDeckPileHtml() {
+    const layers = [0, 1, 2, 3].map((i) => `<div class="setup-coach-deck-pile__layer" style="--layer:${i}"></div>`).join("");
+    return `<div class="setup-coach-deck-pile" id="setup-coach-deck-pile" aria-hidden="true">${layers}</div>`;
+  }
+  function syncCoachDeckPile(preview, phase) {
+    const show = phase >= 1 && phase <= 2;
+    const pile = preview.querySelector("#setup-coach-deck-pile");
+    if (!show) {
+      pile?.remove();
+      return;
+    }
+    if (!pile) {
+      preview.insertAdjacentHTML("beforeend", setupCoachDeckPileHtml());
+    }
+  }
   var SETUP_PREP_BEFORE_MONSTERS = /* @__PURE__ */ new Set(["intro", "board", "action-deck"]);
   function leaveCoachThen(next, { keepDeals = false } = {}) {
     const coach = appEl.querySelector(".setup-coach");
@@ -5248,10 +5277,10 @@
   function coachDealBuilders() {
     return {
       1: () => `<div class="setup-deal setup-deal--zero" id="setup-deal-zero" data-slots="zero" aria-hidden="true">${setupDealCardsHtml(
-        { costs: [0, 0, 0] }
+        { costs: [0, 0, 0], pool: true }
       )}</div>`,
       2: () => `<div class="setup-deal setup-deal--rest" id="setup-deal-rest" data-slots="rest" aria-hidden="true">${setupDealCardsHtml(
-        { costs: [1, 2, 1] }
+        { costs: [1, 2, 1], pool: true }
       )}</div>`,
       3: () => setupExploreDecksHtml(),
       4: () => setupElixirDeckHtml(),
@@ -5388,6 +5417,7 @@
         ).forEach((c) => c.classList.remove("is-dealt"));
       }
     });
+    syncCoachDeckPile(preview, phase);
     ensureCoachSvgExtras(preview, phase);
     syncCoachScreenMods(phase);
     bindSetupDeckCoach(phase);
@@ -5656,10 +5686,10 @@
     ).join("")}
     </div>`;
   }
-  function setupDealCardsHtml({ costs, settled = false }) {
+  function setupDealCardsHtml({ costs, settled = false, pool = false }) {
     return costs.map(
       (cost, i) => `
-        <div class="setup-deal-card${settled ? " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
+        <div class="setup-deal-card${pool ? " setup-deal-card--pool" : ""}${settled ? " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
           <div class="setup-deal-card__inner">
             <div class="setup-deal-card__face setup-deal-card__face--back" aria-hidden="true"></div>
             <div class="setup-deal-card__face setup-deal-card__face--front">
@@ -5738,12 +5768,14 @@
               ${coachPhase >= 1 ? `<div class="setup-deal setup-deal--zero${dealRootClass(coachPhase > 1)}" id="setup-deal-zero" data-slots="zero" aria-hidden="true">
                       ${setupDealCardsHtml({
       costs: [0, 0, 0],
+      pool: true,
       settled: coachPhase > 1
     })}
                     </div>` : ""}
               ${coachPhase >= 2 ? `<div class="setup-deal setup-deal--rest${dealRootClass(coachPhase > 2)}" id="setup-deal-rest" data-slots="rest" aria-hidden="true">
                       ${setupDealCardsHtml({
       costs: [1, 2, 1],
+      pool: true,
       settled: coachPhase > 2
     })}
                     </div>` : ""}
@@ -5754,7 +5786,8 @@
               ${locFightActive ? setupLocFightHtml({ settled: coachPhase > 7 }) : ""}
               ${goldDiceActive ? setupGoldDiceHtml({ settled: coachPhase > 8 }) : ""}
               ${areaCardsActive ? setupAreaTokensOnCardsHtml({ settled: coachPhase > 9 }) : ""}
-              ${monsterSpawnActive ? setupMonsterSpawnHtml({ settled: false }) : ""}` : ""}
+              ${monsterSpawnActive ? setupMonsterSpawnHtml({ settled: false }) : ""}
+              ${coachPhase >= 1 && coachPhase <= 2 ? setupCoachDeckPileHtml() : ""}` : ""}
       </div>` : "";
     const enterBoard = step.id === "board" && _setupEnterBoard;
     if (enterBoard) _setupEnterBoard = false;
@@ -5986,12 +6019,15 @@
       const dr = deck.getBoundingClientRect();
       if (pr.width < 8 || dr.width < 2) return;
       const isNotchDeal = dealRoot.id === "setup-deal-elixir" || dealRoot.id === "setup-deal-trophy";
+      const isPoolDeal = dealRoot.id === "setup-deal-zero" || dealRoot.id === "setup-deal-rest";
       [...dealRoot.querySelectorAll(".setup-deal-card")].forEach((card, i) => {
         const slot = targetSlots[i];
         if (!slot) return;
         const sr = slot.getBoundingClientRect();
-        const w = isNotchDeal ? Math.max(24, sr.width) : Math.max(28, sr.width);
-        const h = isNotchDeal ? Math.max(22, sr.height) : Math.max(40, sr.height);
+        const { w, h } = isPoolDeal ? setupPoolCardSize(sr) : {
+          w: isNotchDeal ? Math.max(24, sr.width) : Math.max(28, sr.width),
+          h: isNotchDeal ? Math.max(22, sr.height) : Math.max(40, sr.height)
+        };
         const x0 = dr.left - pr.left + (dr.width - w) / 2;
         const y0 = dr.top - pr.top + (dr.height - h) / 2;
         const x1 = sr.left - pr.left + (sr.width - w) / 2;
@@ -6193,7 +6229,22 @@
         chip2.style.zIndex = String(42 - i);
       });
     };
+    const layoutCoachDeckPile = () => {
+      if (phase < 1 || phase > 2 || !deck) return;
+      const pile = preview.querySelector("#setup-coach-deck-pile");
+      if (!pile) return;
+      const pr = preview.getBoundingClientRect();
+      const dr = deck.getBoundingClientRect();
+      if (pr.width < 8 || dr.width < 2) return;
+      const { w, h } = setupPoolCardSize(dr);
+      pile.style.setProperty("--w", `${w}px`);
+      pile.style.setProperty("--h", `${h}px`);
+      pile.style.left = `${dr.left - pr.left + (dr.width - w) / 2}px`;
+      pile.style.top = `${dr.top - pr.top + (dr.height - h) / 2}px`;
+      pile.classList.add("is-visible");
+    };
     const layoutAll = () => {
+      layoutCoachDeckPile();
       layoutDealGroup(appEl.querySelector("#setup-deal-zero"), zeroSlots);
       layoutDealGroup(appEl.querySelector("#setup-deal-rest"), restSlots);
       layoutDealGroup(appEl.querySelector("#setup-deal-explore"), exploreSlots);

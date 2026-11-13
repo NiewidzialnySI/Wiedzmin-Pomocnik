@@ -4560,6 +4560,49 @@ h3 {
   stroke-width: 0.5;
 }
 
+/* Zakryta talia akcji przy polu „6” — fazy 1–2 kreatora puli */
+.setup-coach-deck-pile {
+  position: absolute;
+  z-index: 7;
+  width: var(--w, 48px);
+  height: var(--h, 28px);
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 3px 6px rgba(26, 24, 20, 0.32));
+}
+
+.setup-coach-deck-pile.is-visible {
+  opacity: 1;
+}
+
+.setup-coach-deck-pile__layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(196, 161, 74, 0.55);
+  background:
+    linear-gradient(145deg, rgba(70, 42, 28, 0.96), rgba(40, 26, 18, 0.98)),
+    repeating-linear-gradient(
+      -18deg,
+      transparent 0 3px,
+      rgba(196, 161, 74, 0.12) 3px 4px
+    );
+  transform: translate(calc(var(--layer, 0) * 1.1px), calc(var(--layer, 0) * -0.85px));
+}
+
+.setup-coach-deck-pile__layer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28%;
+  height: 62%;
+  margin: -31% 0 0 -14%;
+  border: 1px solid rgba(212, 176, 90, 0.4);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
 .map-card-slot.is-coach-filled .map-card-slot-well {
   fill: rgba(212, 176, 90, 0.14);
   stroke: rgba(196, 161, 74, 0.4);
@@ -4693,6 +4736,23 @@ h3 {
   text-transform: uppercase;
   color: #8a6a28;
   margin-top: 0.05rem;
+}
+
+.setup-deal-card--pool .setup-deal-card__face {
+  container-type: size;
+}
+
+.setup-deal-card--pool .setup-deal-card__cost {
+  font-size: clamp(0.72rem, 42cqh, 1.15rem);
+}
+
+.setup-deal-card--pool .setup-deal-card__label {
+  font-size: clamp(0.4rem, 16cqh, 0.55rem);
+}
+
+.setup-deal-card--pool .setup-deal-card__face--back::after {
+  width: 22%;
+  height: 48%;
 }
 
 .setup-screen--enter-coach.setup-screen--deal-zero .setup-coach-bubble {
