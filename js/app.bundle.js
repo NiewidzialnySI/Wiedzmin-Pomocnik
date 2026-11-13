@@ -6455,7 +6455,7 @@
     const back = COMMON_ACTION_DECK_BACK_SRC;
     return costs.map(
       (cost, i) => `
-        <div class="setup-deal-card${useCommonBack ? " setup-deal-card--pool setup-deal-card--portrait" : ""}${settled ? useCommonBack ? " is-dealt is-flipped is-slot-horizontal is-settled" : " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
+        <div class="setup-deal-card${useCommonBack ? " setup-deal-card--pool setup-deal-card--portrait is-slot-horizontal" : ""}${settled ? useCommonBack ? " is-dealt is-flipped is-slot-horizontal is-settled" : " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
           ${useCommonBack ? `<div class="setup-deal-card__rot">` : ""}
           <div class="setup-deal-card__inner">
             <div class="setup-deal-card__face setup-deal-card__face--back${useCommonBack ? " setup-deal-card__face--scan" : ""}" aria-hidden="true">${useCommonBack ? `<img src="${back}?v=${v}" alt="" decoding="async" />` : ""}</div>
@@ -7036,30 +7036,37 @@
         if (!slotBox?.width) return;
         const landW = slotBox.width;
         const landH = slotBox.height;
-        const { unrotated } = cardFitInLipRect({
+        const slotFit = cardFitInLipRect({
           x: 0,
           y: 0,
           w: landW,
           h: landH
         });
-        const portraitW = unrotated.w;
-        const portraitH = unrotated.h;
+        const flyW = slotFit.visual.w;
+        const flyH = slotFit.visual.h;
+        const portraitW = slotFit.unrotated.w;
+        const portraitH = slotFit.unrotated.h;
         const fanX = i * 1.2;
         const fanY = i * -0.9;
-        const x0 = deckBox.left + deckBox.width / 2 - portraitW / 2 + fanX;
-        const y0 = deckBox.top + deckBox.height / 2 - portraitH / 2 + fanY;
+        const x0 = deckBox.left + deckBox.width / 2 - flyW / 2 + fanX;
+        const y0 = deckBox.top + deckBox.height / 2 - flyH / 2 + fanY;
         const x1 = slotBox.left;
         const y1 = slotBox.top;
-        const x1Fly = slotBox.left + slotBox.width / 2 - portraitW / 2;
-        const y1Fly = slotBox.top + slotBox.height / 2 - portraitH / 2;
+        const x1Fly = slotBox.left + slotBox.width / 2 - flyW / 2;
+        const y1Fly = slotBox.top + slotBox.height / 2 - flyH / 2;
         const seatScale = mainDeckSeatScaleForPortraitInLip(
           { width: landW, height: landH },
           portraitW,
           portraitH
         );
         const { fitRotW, fitRotH } = htmlCardFitVarsForLip({ width: landW, height: landH });
-        card.style.setProperty("--w", `${portraitW}px`);
-        card.style.setProperty("--h", `${portraitH}px`);
+        if (!card.classList.contains("is-slot-horizontal")) {
+          card.classList.add("is-slot-horizontal");
+        }
+        card.style.setProperty("--w", `${flyW}px`);
+        card.style.setProperty("--h", `${flyH}px`);
+        card.style.setProperty("--portrait-w", `${portraitW}px`);
+        card.style.setProperty("--portrait-h", `${portraitH}px`);
         card.style.setProperty("--w1", `${landW}px`);
         card.style.setProperty("--h1", `${landH}px`);
         card.style.setProperty("--x0", `${x0}px`);
@@ -7081,10 +7088,11 @@
       const cards = [...dealRoot.querySelectorAll(".setup-deal-card--pool")].filter(
         (c) => !c.classList.contains("is-settled") && !c.classList.contains("is-dealt")
       );
+      cards.forEach((c) => c.classList.add("is-slot-horizontal"));
       layoutZeroPoolGroup(dealRoot, zeroSlots);
       if (reduce) {
         cards.forEach(
-          (c) => c.classList.add("is-dealt", "is-flipped", "is-slot-horizontal", "is-settled")
+          (c) => c.classList.add("is-dealt", "is-flipped", "is-settled")
         );
         dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned");
         return;
@@ -7098,7 +7106,7 @@
           const card = cards[i];
           layoutZeroPoolGroup(dealRoot, zeroSlots);
           dealRoot.classList.add("is-flying");
-          card.classList.add("is-dealt", "is-landing", "is-slot-horizontal");
+          card.classList.add("is-dealt", "is-landing");
           await sleep3(540);
           dealRoot.classList.remove("is-flying");
           card.classList.remove("is-landing");
@@ -7107,9 +7115,7 @@
           layoutZeroPoolGroup(dealRoot, zeroSlots);
           dealRoot.classList.add("is-seating");
           void card.offsetWidth;
-          requestAnimationFrame(() => {
-            card.classList.add("is-seating", "is-slot-horizontal");
-          });
+          requestAnimationFrame(() => card.classList.add("is-seating"));
           await sleep3(760);
           dealRoot.classList.remove("is-seating");
           card.classList.remove("is-seating");
