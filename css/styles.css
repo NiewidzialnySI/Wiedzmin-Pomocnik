@@ -5575,10 +5575,17 @@ h3 {
   margin-top: 0.05rem;
 }
 
-/* Faza 1: 3× koszt 0 — lot poziomo od talii do dolnych pól */
+/* Faza 1: 3× koszt 0 — shell = lip (poziomy), tył jak talia (−90° na skanie) */
+.setup-deal--zero .setup-deal-card--pool,
+.setup-deal--zero .setup-deal-card--pool.is-dealt,
+.setup-deal--zero .setup-deal-card--pool.is-settled {
+  width: var(--w1, var(--w, 40px));
+  height: var(--h1, var(--h, 24px));
+  overflow: hidden;
+  border-radius: 3px;
+}
+
 .setup-deal--zero .setup-deal-card--pool {
-  width: var(--w, 40px);
-  height: var(--h, 56px);
   transform: translate(var(--x0, 0), var(--y0, 0));
   opacity: 0;
 }
@@ -5592,43 +5599,12 @@ h3 {
 
 .setup-deal--zero .setup-deal-card--pool.is-dealt,
 .setup-deal--zero .setup-deal-card--pool.is-settled {
-  width: var(--w, 40px);
-  height: var(--h, 56px);
   transform: translate(var(--x1-fly, var(--x1)), var(--y1-fly, var(--y1)));
 }
 
-.setup-deal-card--pool .setup-deal-card__rot {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--fit-rot-w, var(--portrait-w, 100%));
-  height: var(--fit-rot-h, var(--portrait-h, 100%));
-  transform-origin: center center;
-  transform-style: preserve-3d;
-  transform: translate(-50%, -50%);
-}
-
-.setup-deal-card--pool.is-slot-horizontal .setup-deal-card__rot {
-  transform: translate(-50%, -50%) rotate(-90deg) scale(var(--seat-scale, 1));
-}
-
-.setup-deal--zero.is-ready
-  .setup-deal-card--pool.is-slot-horizontal.is-seating
-  .setup-deal-card__rot {
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.28, 1);
-}
-
-.setup-deal--zero.is-flying .setup-deal-card--pool,
-.setup-deal--zero.is-ready .setup-deal-card--pool.is-slot-horizontal {
-  width: var(--w) !important;
-  height: var(--h) !important;
-}
-
-.setup-deal-card--pool:not(.is-slot-horizontal) .setup-deal-card__face--scan img {
+.setup-deal-card--pool.is-slot-horizontal .setup-deal-card__inner {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 
 .setup-deal-card--pool.is-slot-horizontal .setup-deal-card__face--scan {
@@ -5637,14 +5613,24 @@ h3 {
 }
 
 .setup-deal-card--pool.is-slot-horizontal .setup-deal-card__face--scan img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  height: var(--fit-rot-h, 100%);
+  width: var(--fit-rot-w, auto);
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
   object-position: center;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  filter: drop-shadow(0 1px 2px rgba(26, 24, 20, 0.2));
 }
 
-.setup-deal-card--pool .setup-deal-card__face--front {
+.setup-deal-card--pool .setup-deal-card__face--pool-cost {
   container-type: size;
+  background: linear-gradient(155deg, #f4e9c8 0%, #e8d49a 55%, #d9bc6e 100%);
+  border: 1px solid rgba(160, 120, 48, 0.65);
 }
 
 .setup-deal-card--pool .setup-deal-card__cost {

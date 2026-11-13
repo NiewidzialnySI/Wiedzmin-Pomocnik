@@ -1697,14 +1697,19 @@ function applyCoachPhaseDom(phase) {
     else {
       node.classList.remove("is-settled-layer", "is-positioned", "is-ready", "is-leaving");
       node.querySelectorAll(".setup-deal-card").forEach((c) => {
+        const poolHoriz = c.classList.contains("setup-deal-card--pool");
         c.classList.remove(
           "is-dealt",
           "is-flipped",
           "is-settled",
-          "is-slot-horizontal",
           "is-landing",
           "is-seating"
         );
+        if (!poolHoriz) {
+          c.classList.remove("is-slot-horizontal");
+        } else {
+          c.classList.add("is-slot-horizontal");
+        }
       });
       node
         .querySelectorAll(
@@ -2100,29 +2105,25 @@ function setupDealCardsHtml({ costs, settled = false, useCommonBack = false } = 
     .map(
       (cost, i) => `
         <div class="setup-deal-card${
-          useCommonBack
-            ? " setup-deal-card--pool setup-deal-card--portrait is-slot-horizontal"
-            : ""
+          useCommonBack ? " setup-deal-card--pool is-slot-horizontal" : ""
         }${
           settled
             ? useCommonBack
-              ? " is-dealt is-flipped is-slot-horizontal is-settled"
+              ? " is-dealt is-flipped is-settled"
               : " is-dealt is-flipped is-settled"
             : ""
         }" data-deal="${i}">
-          ${useCommonBack ? `<div class="setup-deal-card__rot">` : ""}
           <div class="setup-deal-card__inner">
             <div class="setup-deal-card__face setup-deal-card__face--back${
               useCommonBack ? " setup-deal-card__face--scan" : ""
             }" aria-hidden="true">${
         useCommonBack ? `<img src="${back}?v=${v}" alt="" decoding="async" />` : ""
       }</div>
-            <div class="setup-deal-card__face setup-deal-card__face--front">
+            <div class="setup-deal-card__face setup-deal-card__face--front setup-deal-card__face--pool-cost">
               <span class="setup-deal-card__cost">${cost}</span>
               <span class="setup-deal-card__label">koszt</span>
             </div>
           </div>
-          ${useCommonBack ? `</div>` : ""}
         </div>`
     )
     .join("");
@@ -2880,29 +2881,27 @@ function bindSetupDeckCoach(phase = 0) {
       const slotBox = measureSlotBoxInLayer(positionRoot, slot, { metric: "lip" });
       if (!slotBox?.width) return;
 
-      const landW = slotBox.width;
-      const landH = slotBox.height;
-      const slotFit = cardFitInLipRect({
-        x: 0,
-        y: 0,
-        w: landW,
-        h: landH,
-      });
-      const flyW = slotFit.visual.w;
-      const flyH = slotFit.visual.h;
+      let landW = slotBox.width;
+      let landH = slotBox.height;
+      let deckW = deckBox.width;
+      let deckH = deckBox.height;
+      if (landH > landW) [landW, landH] = [landH, landW];
+      if (deckH > deckW) [deckW, deckH] = [deckH, deckW];
+
+      const slotFit = cardFitInLipRect({ x: 0, y: 0, w: landW, h: landH });
       const portraitW = slotFit.unrotated.w;
       const portraitH = slotFit.unrotated.h;
 
       const fanX = i * 1.2;
       const fanY = i * -0.9;
-      /* Wylot ze środka lipu talii — od razu poziomo (visual = footprint w lipie). */
-      const x0 = deckBox.left + deckBox.width / 2 - flyW / 2 + fanX;
-      const y0 = deckBox.top + deckBox.height / 2 - flyH / 2 + fanY;
+      /* Poziomy shell = prostokąt lip (jak osadzona talia). */
+      const x0 = deckBox.left + (deckW - landW) / 2 + fanX;
+      const y0 = deckBox.top + (deckH - landH) / 2 + fanY;
 
       const x1 = slotBox.left;
       const y1 = slotBox.top;
-      const x1Fly = slotBox.left + slotBox.width / 2 - flyW / 2;
-      const y1Fly = slotBox.top + slotBox.height / 2 - flyH / 2;
+      const x1Fly = slotBox.left;
+      const y1Fly = slotBox.top;
       const seatScale = mainDeckSeatScaleForPortraitInLip(
         { width: landW, height: landH },
         portraitW,
@@ -2910,13 +2909,9 @@ function bindSetupDeckCoach(phase = 0) {
       );
       const { fitRotW, fitRotH } = htmlCardFitVarsForLip({ width: landW, height: landH });
 
-      if (!card.classList.contains("is-slot-horizontal")) {
-        card.classList.add("is-slot-horizontal");
-      }
-      card.style.setProperty("--w", `${flyW}px`);
-      card.style.setProperty("--h", `${flyH}px`);
-      card.style.setProperty("--portrait-w", `${portraitW}px`);
-      card.style.setProperty("--portrait-h", `${portraitH}px`);
+      card.classList.add("is-slot-horizontal");
+      card.style.setProperty("--w", `${landW}px`);
+      card.style.setProperty("--h", `${landH}px`);
       card.style.setProperty("--w1", `${landW}px`);
       card.style.setProperty("--h1", `${landH}px`);
       card.style.setProperty("--x0", `${x0}px`);
@@ -2966,15 +2961,8 @@ function bindSetupDeckCoach(phase = 0) {
         card.classList.remove("is-landing");
         card.classList.add("is-flipped");
         await sleep(480);
-        layoutZeroPoolGroup(dealRoot, zeroSlots);
-        dealRoot.classList.add("is-seating");
-        void card.offsetWidth;
-        requestAnimationFrame(() => card.classList.add("is-seating"));
-        await sleep(760);
-        dealRoot.classList.remove("is-seating");
-        card.classList.remove("is-seating");
         card.classList.add("is-settled");
-        await sleep(140);
+        await sleep(80);
       }
       if (bindGen === _coachBindGen && _setupDeckCoachPhase === 1) {
         dealRoot.classList.add("is-settled-layer", "is-positioned");
