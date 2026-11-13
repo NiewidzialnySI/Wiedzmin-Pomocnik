@@ -1626,6 +1626,7 @@ function syncCoachScreenMods(phase) {
   const screen = appEl.querySelector(".setup-screen");
   if (!screen) return;
   screen.classList.toggle("setup-screen--deal-zero", phase >= 1);
+  screen.classList.toggle("setup-screen--pool-draw", phase >= 1 && phase <= 2);
   screen.classList.toggle("setup-screen--explore-decks", phase >= 3);
   screen.classList.toggle("setup-screen--elixir-deck", phase >= 4);
   screen.classList.toggle("setup-screen--monster-stacks", phase >= 6);
@@ -2026,6 +2027,8 @@ function applyMainDeckLandedState(root, { stackOnSlot = true } = {}) {
     if (stackOnSlot && i < cards.length - 1) c.classList.add("is-stack-hidden");
   });
   appEl.querySelector(".setup-screen")?.classList.add("setup-screen--main-deck-settled");
+  const preview = appEl.querySelector(".setup-board-preview--coach");
+  if (preview) mountMainDeckInForeignObject(preview, root);
   if (!_setupMainDeckPlaced) {
     _setupMainDeckPlaced = true;
     queryActionDeckSlot(appEl)?.classList.add("is-coach-deck");
@@ -2888,9 +2891,9 @@ function bindSetupDeckCoach(phase = 0) {
 
       const fanX = i * 1.2;
       const fanY = i * -0.9;
-      /* Wylot z talii — cały czas pionowa karta (nie obrót −90° do końca animacji). */
+      /* Wylot ze środka lipu talii — od razu poziomo (`is-slot-horizontal` w runZeroPoolDeal). */
       const x0 = deckBox.left + deckBox.width / 2 - portraitW / 2 + fanX;
-      const y0 = deckBox.top - portraitH * 0.72 + fanY;
+      const y0 = deckBox.top + deckBox.height / 2 - portraitH / 2 + fanY;
 
       const x1 = slotBox.left;
       const y1 = slotBox.top;
@@ -2947,7 +2950,7 @@ function bindSetupDeckCoach(phase = 0) {
         const card = cards[i];
         layoutZeroPoolGroup(dealRoot, zeroSlots);
         dealRoot.classList.add("is-flying");
-        card.classList.add("is-dealt", "is-landing");
+        card.classList.add("is-dealt", "is-landing", "is-slot-horizontal");
         await sleep(540);
         dealRoot.classList.remove("is-flying");
         card.classList.remove("is-landing");
@@ -3211,7 +3214,25 @@ function bindSetupDeckCoach(phase = 0) {
     });
   };
 
+  const ensureMainDeckVisibleDuringPoolDraw = () => {
+    if (phase < 1 || phase > 2 || !_setupMainDeckPlaced) return;
+    const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+    if (!dealRoot || !preview) return;
+    mountMainDeckInForeignObject(preview, dealRoot);
+    layoutMainDeck();
+    dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned", "is-idle");
+    dealRoot.classList.remove("is-flying", "is-seating", "is-shuffling");
+    const cards = [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")];
+    cards.forEach((c, i) => {
+      c.classList.add("is-dealt", "is-settled", "is-slot-horizontal");
+      c.classList.remove("is-landing", "is-seating", "is-seated-visual");
+      if (i < cards.length - 1) c.classList.add("is-stack-hidden");
+      else c.classList.remove("is-stack-hidden");
+    });
+  };
+
   const layoutAll = () => {
+    ensureMainDeckVisibleDuringPoolDraw();
     layoutMainDeck();
     if (phase === 0) layoutCoachSideTile();
     layoutDealGroup(appEl.querySelector("#setup-deal-zero"), zeroSlots);
