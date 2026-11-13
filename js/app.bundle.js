@@ -4522,6 +4522,17 @@
   }
 
   // js/map/action-deck-mount.js
+  function queryActionDeckForeignHost(searchRoot) {
+    if (!searchRoot) return null;
+    return searchRoot.querySelector(".map-action-deck-fo-host");
+  }
+  function mountMainDeckInForeignObject(preview, dealRoot) {
+    const host = queryActionDeckForeignHost(preview);
+    if (!host || !dealRoot) return false;
+    if (dealRoot.parentElement !== host) host.appendChild(dealRoot);
+    dealRoot.classList.add("is-svg-anchored");
+    return true;
+  }
   function unmountMainDeckToOverlay(preview, dealRoot) {
     const overlay = preview?.querySelector?.('[data-map-layer="overlay"]');
     if (!overlay || !dealRoot) return;
@@ -6025,6 +6036,7 @@
     const screen = appEl.querySelector(".setup-screen");
     if (!screen) return;
     screen.classList.toggle("setup-screen--deal-zero", phase >= 1);
+    screen.classList.toggle("setup-screen--pool-draw", phase >= 1 && phase <= 2);
     screen.classList.toggle("setup-screen--explore-decks", phase >= 3);
     screen.classList.toggle("setup-screen--elixir-deck", phase >= 4);
     screen.classList.toggle("setup-screen--monster-stacks", phase >= 6);
@@ -6089,14 +6101,19 @@
       else {
         node.classList.remove("is-settled-layer", "is-positioned", "is-ready", "is-leaving");
         node.querySelectorAll(".setup-deal-card").forEach((c) => {
+          const poolHoriz = c.classList.contains("setup-deal-card--pool");
           c.classList.remove(
             "is-dealt",
             "is-flipped",
             "is-settled",
-            "is-slot-horizontal",
             "is-landing",
             "is-seating"
           );
+          if (!poolHoriz) {
+            c.classList.remove("is-slot-horizontal");
+          } else {
+            c.classList.add("is-slot-horizontal");
+          }
         });
         node.querySelectorAll(
           ".setup-loc-token-chip, .setup-monster-token-chip, .setup-gold-chip, .setup-die-chip, .setup-area-card-chip, .setup-spawn-token-chip"
@@ -6380,6 +6397,8 @@
       if (stackOnSlot && i < cards.length - 1) c.classList.add("is-stack-hidden");
     });
     appEl.querySelector(".setup-screen")?.classList.add("setup-screen--main-deck-settled");
+    const preview = appEl.querySelector(".setup-board-preview--coach");
+    if (preview) mountMainDeckInForeignObject(preview, root);
     if (!_setupMainDeckPlaced) {
       _setupMainDeckPlaced = true;
       queryActionDeckSlot2(appEl)?.classList.add("is-coach-deck");
@@ -6441,16 +6460,14 @@
     const back = COMMON_ACTION_DECK_BACK_SRC;
     return costs.map(
       (cost, i) => `
-        <div class="setup-deal-card${useCommonBack ? " setup-deal-card--pool setup-deal-card--portrait" : ""}${settled ? useCommonBack ? " is-dealt is-flipped is-slot-horizontal is-settled" : " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
-          ${useCommonBack ? `<div class="setup-deal-card__rot">` : ""}
+        <div class="setup-deal-card${useCommonBack ? " setup-deal-card--pool is-slot-horizontal" : ""}${settled ? useCommonBack ? " is-dealt is-flipped is-settled" : " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
           <div class="setup-deal-card__inner">
             <div class="setup-deal-card__face setup-deal-card__face--back${useCommonBack ? " setup-deal-card__face--scan" : ""}" aria-hidden="true">${useCommonBack ? `<img src="${back}?v=${v}" alt="" decoding="async" />` : ""}</div>
-            <div class="setup-deal-card__face setup-deal-card__face--front">
+            <div class="setup-deal-card__face setup-deal-card__face--front setup-deal-card__face--pool-cost">
               <span class="setup-deal-card__cost">${cost}</span>
               <span class="setup-deal-card__label">koszt</span>
             </div>
           </div>
-          ${useCommonBack ? `</div>` : ""}
         </div>`
     ).join("");
   }
@@ -7020,32 +7037,32 @@
         if (!slot) return;
         const slotBox = measureSlotBoxInLayer(positionRoot, slot, { metric: "lip" });
         if (!slotBox?.width) return;
-        const landW = slotBox.width;
-        const landH = slotBox.height;
-        const { unrotated } = cardFitInLipRect({
-          x: 0,
-          y: 0,
-          w: landW,
-          h: landH
-        });
-        const portraitW = unrotated.w;
-        const portraitH = unrotated.h;
+        let landW = slotBox.width;
+        let landH = slotBox.height;
+        let deckW = deckBox.width;
+        let deckH = deckBox.height;
+        if (landH > landW) [landW, landH] = [landH, landW];
+        if (deckH > deckW) [deckW, deckH] = [deckH, deckW];
+        const slotFit = cardFitInLipRect({ x: 0, y: 0, w: landW, h: landH });
+        const portraitW = slotFit.unrotated.w;
+        const portraitH = slotFit.unrotated.h;
         const fanX = i * 1.2;
         const fanY = i * -0.9;
-        const x0 = deckBox.left + deckBox.width / 2 - portraitW / 2 + fanX;
-        const y0 = deckBox.top - portraitH * 0.72 + fanY;
+        const x0 = deckBox.left + (deckW - landW) / 2 + fanX;
+        const y0 = deckBox.top + (deckH - landH) / 2 + fanY;
         const x1 = slotBox.left;
         const y1 = slotBox.top;
-        const x1Fly = slotBox.left + slotBox.width / 2 - portraitW / 2;
-        const y1Fly = slotBox.top + slotBox.height / 2 - portraitH / 2;
+        const x1Fly = slotBox.left;
+        const y1Fly = slotBox.top;
         const seatScale = mainDeckSeatScaleForPortraitInLip(
           { width: landW, height: landH },
           portraitW,
           portraitH
         );
         const { fitRotW, fitRotH } = htmlCardFitVarsForLip({ width: landW, height: landH });
-        card.style.setProperty("--w", `${portraitW}px`);
-        card.style.setProperty("--h", `${portraitH}px`);
+        card.classList.add("is-slot-horizontal");
+        card.style.setProperty("--w", `${landW}px`);
+        card.style.setProperty("--h", `${landH}px`);
         card.style.setProperty("--w1", `${landW}px`);
         card.style.setProperty("--h1", `${landH}px`);
         card.style.setProperty("--x0", `${x0}px`);
@@ -7067,10 +7084,11 @@
       const cards = [...dealRoot.querySelectorAll(".setup-deal-card--pool")].filter(
         (c) => !c.classList.contains("is-settled") && !c.classList.contains("is-dealt")
       );
+      cards.forEach((c) => c.classList.add("is-slot-horizontal"));
       layoutZeroPoolGroup(dealRoot, zeroSlots);
       if (reduce) {
         cards.forEach(
-          (c) => c.classList.add("is-dealt", "is-flipped", "is-slot-horizontal", "is-settled")
+          (c) => c.classList.add("is-dealt", "is-flipped", "is-settled")
         );
         dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned");
         return;
@@ -7090,17 +7108,8 @@
           card.classList.remove("is-landing");
           card.classList.add("is-flipped");
           await sleep3(480);
-          layoutZeroPoolGroup(dealRoot, zeroSlots);
-          dealRoot.classList.add("is-seating");
-          void card.offsetWidth;
-          requestAnimationFrame(() => {
-            card.classList.add("is-seating", "is-slot-horizontal");
-          });
-          await sleep3(760);
-          dealRoot.classList.remove("is-seating");
-          card.classList.remove("is-seating");
           card.classList.add("is-settled");
-          await sleep3(140);
+          await sleep3(80);
         }
         if (bindGen === _coachBindGen && _setupDeckCoachPhase === 1) {
           dealRoot.classList.add("is-settled-layer", "is-positioned");
@@ -7325,7 +7334,24 @@
         chip2.style.zIndex = String(42 - i);
       });
     };
+    const ensureMainDeckVisibleDuringPoolDraw = () => {
+      if (phase < 1 || phase > 2 || !_setupMainDeckPlaced) return;
+      const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+      if (!dealRoot || !preview) return;
+      mountMainDeckInForeignObject(preview, dealRoot);
+      layoutMainDeck();
+      dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned", "is-idle");
+      dealRoot.classList.remove("is-flying", "is-seating", "is-shuffling");
+      const cards = [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")];
+      cards.forEach((c, i) => {
+        c.classList.add("is-dealt", "is-settled", "is-slot-horizontal");
+        c.classList.remove("is-landing", "is-seating", "is-seated-visual");
+        if (i < cards.length - 1) c.classList.add("is-stack-hidden");
+        else c.classList.remove("is-stack-hidden");
+      });
+    };
     const layoutAll = () => {
+      ensureMainDeckVisibleDuringPoolDraw();
       layoutMainDeck();
       if (phase === 0) layoutCoachSideTile();
       layoutDealGroup(appEl.querySelector("#setup-deal-zero"), zeroSlots);

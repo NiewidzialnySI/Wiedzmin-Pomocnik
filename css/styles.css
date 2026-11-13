@@ -5016,6 +5016,17 @@ h3 {
   transition: none;
 }
 
+/* Fazy 1–2: HTML stos w foreignObject zamiast płaskiego tyłu SVG */
+.setup-screen--main-deck-settled.setup-screen--pool-draw #setup-deal-main-deck {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+.setup-screen--main-deck-settled.setup-screen--pool-draw .map-action-deck-card-svg {
+  opacity: 0 !important;
+}
+
 .setup-board-preview .map-svg {
   width: 100%;
   height: 100%;
@@ -5564,10 +5575,17 @@ h3 {
   margin-top: 0.05rem;
 }
 
-/* Faza 1: 3× koszt 0 — stały pionowy rozmiar, środek lipu, obrót osobno od flipa */
+/* Faza 1: 3× koszt 0 — shell = lip (poziomy), tył jak talia (−90° na skanie) */
+.setup-deal--zero .setup-deal-card--pool,
+.setup-deal--zero .setup-deal-card--pool.is-dealt,
+.setup-deal--zero .setup-deal-card--pool.is-settled {
+  width: var(--w1, var(--w, 40px));
+  height: var(--h1, var(--h, 24px));
+  overflow: hidden;
+  border-radius: 3px;
+}
+
 .setup-deal--zero .setup-deal-card--pool {
-  width: var(--w, 40px);
-  height: var(--h, 56px);
   transform: translate(var(--x0, 0), var(--y0, 0));
   opacity: 0;
 }
@@ -5581,49 +5599,38 @@ h3 {
 
 .setup-deal--zero .setup-deal-card--pool.is-dealt,
 .setup-deal--zero .setup-deal-card--pool.is-settled {
-  width: var(--w, 40px);
-  height: var(--h, 56px);
   transform: translate(var(--x1-fly, var(--x1)), var(--y1-fly, var(--y1)));
 }
 
-.setup-deal-card--pool .setup-deal-card__rot {
-  position: absolute;
-  inset: 0;
-  transform-origin: center center;
-  transform-style: preserve-3d;
-  transform: none;
-}
-
-.setup-deal--zero.is-ready .setup-deal-card--pool.is-seating .setup-deal-card__rot,
-.setup-deal--zero.is-ready .setup-deal-card--pool.is-settled .setup-deal-card__rot {
-  transition: transform 0.72s cubic-bezier(0.22, 1, 0.28, 1);
-}
-
-.setup-deal--zero.is-flying .setup-deal-card--pool .setup-deal-card__rot,
-.setup-deal-card--pool.is-flipped:not(.is-slot-horizontal) .setup-deal-card__rot {
-  transform: none;
-}
-
-.setup-deal-card--pool.is-slot-horizontal.is-seating .setup-deal-card__rot,
-.setup-deal-card--pool.is-slot-horizontal.is-settled .setup-deal-card__rot {
-  transform: rotate(-90deg) scale(var(--seat-scale, 1));
-}
-
-.setup-deal--zero.is-flying .setup-deal-card--pool {
-  width: var(--w) !important;
-  height: var(--h) !important;
-}
-
-.setup-deal-card--pool .setup-deal-card__face--scan img {
+.setup-deal-card--pool.is-slot-horizontal .setup-deal-card__inner {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
-  transform: none;
 }
 
-.setup-deal-card--pool .setup-deal-card__face--front {
+.setup-deal-card--pool.is-slot-horizontal .setup-deal-card__face--scan {
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.setup-deal-card--pool.is-slot-horizontal .setup-deal-card__face--scan img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  height: var(--fit-rot-h, 100%);
+  width: var(--fit-rot-w, auto);
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: center;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  filter: drop-shadow(0 1px 2px rgba(26, 24, 20, 0.2));
+}
+
+.setup-deal-card--pool .setup-deal-card__face--pool-cost {
   container-type: size;
+  background: linear-gradient(155deg, #f4e9c8 0%, #e8d49a 55%, #d9bc6e 100%);
+  border: 1px solid rgba(160, 120, 48, 0.65);
 }
 
 .setup-deal-card--pool .setup-deal-card__cost {
