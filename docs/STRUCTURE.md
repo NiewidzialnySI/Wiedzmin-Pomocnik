@@ -83,7 +83,7 @@ Stary katalog `js/*.js` znika **dopiero po** przeniesieniu modułów — można 
 3. **Stan** — `game-state.js` (localStorage, `normalizeState`); `app.js` tylko importuje.
 4. **Router** — `router.js` + `shell.js`; `render()` deleguje do `views/*`.
 5. **Widoki** — po jednym pliku: `home` → `roster` → … → `setup` (największy) na końcu.
-6. **board.js** — podział: `domain/board-logic.js` + `ui/map/*.js`; brak importu `icons` w domain.
+6. **board.js** — podział: `domain/board-logic.js` + `ui/map/*.js`; brak importu `icons` w domain. **W toku:** warstwy mapy → `js/map/` (szczegóły: `docs/MAP-LAYERS.md`).
 7. **Assety** — `img/schools/_backup_*` i `_centered` do `img/_archive/` (poza ścieżkami w kodzie) lub `.cursorignore`.
 8. **Opcjonalnie** — `type="module"` w dev (`src/main.js` bez bundla na localhost); produkcja nadal bundle dla `file://`.
 

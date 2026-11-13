@@ -115,15 +115,17 @@ export function actionCardsHtml(
 }
 
 /** Kafel „Kto pierwszy?” — wachlarz kart + stos monet (wzorzec deck fan / stack). */
-export function orderStartResourcesHtml(cards, gold) {
+export function orderStartResourcesHtml(cards, gold, opts = {}) {
+  const cardHeight = opts.cardHeight ?? 148;
+  const coinSize = opts.coinSize ?? 56;
   return `<span class="order-res">
     <span class="order-res__pile order-res__pile--cards">
       <span class="order-res__lbl">Karty</span>
-      ${actionCardsHtml(cards, { height: 148, layout: "fan" })}
+      ${actionCardsHtml(cards, { height: cardHeight, layout: "fan" })}
     </span>
     <span class="order-res__pile order-res__pile--gold">
       <span class="order-res__lbl">Złoto</span>
-      ${goldCoinsHtml(gold, { size: 56, layout: "stack" })}
+      ${goldCoinsHtml(gold, { size: coinSize, layout: "stack" })}
     </span>
   </span>`;
 }

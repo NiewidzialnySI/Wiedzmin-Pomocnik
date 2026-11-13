@@ -80,15 +80,17 @@
     const more = full > n ? `<span class="action-cards__more" title="+${full - n}">+${full - n}</span>` : "";
     return `<span class="action-cards${fan} ${className}"${fanStyle}${aria}>${imgs}${more}</span>`;
   }
-  function orderStartResourcesHtml(cards, gold) {
+  function orderStartResourcesHtml(cards, gold, opts = {}) {
+    const cardHeight = opts.cardHeight ?? 148;
+    const coinSize = opts.coinSize ?? 56;
     return `<span class="order-res">
     <span class="order-res__pile order-res__pile--cards">
       <span class="order-res__lbl">Karty</span>
-      ${actionCardsHtml(cards, { height: 148, layout: "fan" })}
+      ${actionCardsHtml(cards, { height: cardHeight, layout: "fan" })}
     </span>
     <span class="order-res__pile order-res__pile--gold">
       <span class="order-res__lbl">Z\u0142oto</span>
-      ${goldCoinsHtml(gold, { size: 56, layout: "stack" })}
+      ${goldCoinsHtml(gold, { size: coinSize, layout: "stack" })}
     </span>
   </span>`;
   }
@@ -618,6 +620,11 @@
       `
       },
       {
+        id: "map-pawns",
+        title: "\u017Betony i figurki na mapie",
+        mapPawnsPrep: true
+      },
+      {
         id: "solo-help",
         title: "Karta pomocy solo",
         body: `
@@ -674,17 +681,6 @@
   function buildMultiSetupSteps(n, roster = []) {
     const steps = [
       {
-        id: "intro",
-        title: "Zaczynamy przygotowanie",
-        body: `
-        <div class="badge-row setup-intro-badges">
-          <span class="badge">${n} graczy</span>
-          <span class="badge">Tylko podstawka</span>
-          <span class="badge">Cel: 4 reputacji</span>
-        </div>
-      `
-      },
-      {
         id: "board",
         title: "Plansza na \u015Brodku",
         body: ``
@@ -698,6 +694,11 @@
         id: "monsters",
         title: "Potwory na start",
         body: buildMonsterSetupHtml(n)
+      },
+      {
+        id: "map-pawns",
+        title: "\u017Betony i figurki na mapie",
+        mapPawnsPrep: true
       },
       {
         id: "first-player",
@@ -803,20 +804,15 @@
         title: "Imi\u0119 i klocki",
         body: "Wybierz imi\u0119 wied\u017Amina z dost\u0119pnych<br />i po\u0142\xF3\u017C klocki w odpowiednie pola."
       },
-      solo ? {
-        id: "reputation",
-        focus: "reputation",
-        boardImg: PLAYER_BOARD_MAT_SRC,
-        boardVer: 1,
-        title: "\u017Beton reputacji",
-        body: "Po\u0142\xF3\u017C \u017Ceton ze <strong>znakiem szko\u0142y</strong> na najni\u017Cszym polu toru reputacji \u2014 start na <strong>0</strong>."
-      } : {
-        id: "trophies",
-        focus: "trophies",
-        boardImg: PLAYER_BOARD_MAT_SRC,
-        boardVer: 1,
-        schoolTrophyPrep: true
-      },
+      ...solo ? [] : [
+        {
+          id: "trophies",
+          focus: "trophies",
+          boardImg: PLAYER_BOARD_MAT_SRC,
+          boardVer: 1,
+          schoolTrophyPrep: true
+        }
+      ],
       {
         id: "deck",
         focus: "deck",
@@ -825,29 +821,11 @@
         schoolActionDeckPrep: true
       },
       {
-        id: "reputation",
-        focus: "reputation",
-        boardImg: PLAYER_BOARD_MAT_SRC,
-        boardVer: 1,
-        title: "\u017Beton reputacji",
-        body: "Po\u0142\xF3\u017C \u017Ceton ze <strong>znakiem szko\u0142y</strong> na najni\u017Cszym polu toru reputacji \u2014 start na <strong>0</strong>.",
-        skip: solo
-      },
-      {
-        id: "figure",
-        focus: "map",
-        title: "Figurka na mapie",
-        body: "Figurka w kolorze szko\u0142y stoi na <strong>obszarze szko\u0142y</strong> na <strong>\u015Brodkowej mapie</strong> (ten sam symbol co na planszetce).",
-        hint: "To ju\u017C nie na planszetce, tylko na stole ze wsp\xF3ln\u0105 map\u0105."
+        id: "figure-ring",
+        focus: "none",
+        figurePrep: true
       }
-    ].filter((s) => !s.skip);
-    steps.push({
-      id: "resources",
-      focus: "full",
-      title: solo ? "Z\u0142oto i karty na r\u0119k\u0119" : "Koniec \u2014 z\u0142oto i karty p\xF3\u017Aniej",
-      body: solo ? `Z banku: ${goldCoinsHtml(3, { size: 30, layout: "stack" })}. Na r\u0119k\u0119 z talii: ${actionCardsHtml(5, { height: 36, layout: "fan" })}.` : "Z\u0142oto i startowe karty bierzesz wed\u0142ug kolejno\u015Bci przy stole \u2014 za chwil\u0119 na ekranie <strong>Kto pierwszy?</strong>.",
-      hint: solo ? "" : "Teraz schowaj do pude\u0142ka niewykorzystane zestawy innych graczy."
-    });
+    ];
     return steps;
   }
   var MOVE_HELP = `
@@ -1099,7 +1077,11 @@
   // js/school-action-deck-prep.js
   var ACTION_CARD_ASPECT_W = 769;
   var ACTION_CARD_ASPECT_H = 1175;
-  var ACTION_DECK_ASSET_V = "9";
+  var ACTION_DECK_ASSET_V = "10";
+  var COMMON_ACTION_DECK_BACK_SRC = "./img/cards/action/common-back.png";
+  var COMMON_ACTION_DECK_CARD_COUNT = 90;
+  var COMMON_ACTION_DECK_STACK_SIZE = 7;
+  var COMMON_ACTION_DECK_ASSET_V = "3";
   var ACTION_DECK_SLOT = {
     leftFrac: 0,
     topFrac: 0.19,
@@ -1119,19 +1101,21 @@
   var GUIDE_ACTION_DECK_LOGO = "./img/cards/action/niedzwiedz/logo.png";
   var ACTION_DECK_POOL_SIZE = 10;
   function guideActionDeckShuffleSrcs(poolSize = ACTION_DECK_POOL_SIZE) {
-    return Array.from(
-      { length: poolSize },
-      (_, i) => GUIDE_ACTION_DECK_CARDS[i % GUIDE_ACTION_DECK_CARDS.length]
-    );
+    const back = schoolActionDeckBackSrc("niedzwiedz");
+    return Array.from({ length: poolSize }, () => back);
   }
   function guideActionDeckFallbackSrc() {
-    return GUIDE_ACTION_DECK_CARDS[0];
+    return schoolActionDeckBackSrc("niedzwiedz");
   }
   function guideActionDeckLogoHintSrc() {
     return GUIDE_ACTION_DECK_LOGO;
   }
   function guideActionDeckHintCardSrc() {
     return GUIDE_ACTION_DECK_CARDS[0];
+  }
+  function schoolActionDeckBackSrc(schoolId) {
+    const id = canonicalSchoolId(schoolId);
+    return `./img/cards/action/${id}-back.png`;
   }
   function schoolActionDeckPrepScenario() {
     return {
@@ -1506,116 +1490,110 @@
     };
   }
 
-  // js/lexicon.js
-  var ATTRIBUTES = [
-    {
-      id: "atak",
-      name: "Atak",
-      body: "Ile kart dobierasz na koniec swojej tury walki (po kombinacji), \xB1 modyfikatory z kart."
-    },
-    {
-      id: "obrona",
-      name: "Obrona",
-      body: "Limit tarczy. +1 obrona \u2192 natychmiast +1 tarcza (max 5). Tarcza nigdy > obrona. Po walce ustaw tarcz\u0119 = obrona."
-    },
-    {
-      id: "alchemia",
-      name: "Alchemia",
-      body: "+1 alchemia \u2192 dobierz 1 eliksir. W ca\u0142ej walce mo\u017Cesz zu\u017Cy\u0107 \u0142\u0105cznie tyle eliksir\xF3w, ile wynosi alchemia. Limit posiadania: 4 eliksiry."
-    },
-    {
-      id: "zdolnosc",
-      name: "Zdolno\u015B\u0107 specjalna (szko\u0142a)",
-      body: "Unikalna dla szko\u0142y. Raz na walk\u0119 (chyba \u017Ce inaczej). Po podniesieniu poziomu nie u\u017Cywasz efekt\xF3w ni\u017Cszych poziom\xF3w. Trening tylko w swojej szkole."
-    }
-  ];
-  var SCHOOL_SPECIALTIES = [
-    {
-      id: "wilk",
-      name: "Szko\u0142a Wilka \u2014 szermierka",
-      body: "Raz na walk\u0119, gdy zagrasz kombinacj\u0119 3+ kart: mo\u017Cesz zada\u0107 dodatkowe obra\u017Cenia; od II poziomu tak\u017Ce dobra\u0107 dodatkowe karty (wg ikon na torze)."
-    },
-    {
-      id: "gryf",
-      name: "Szko\u0142a Gryfa \u2014 magia",
-      body: "Raz na walk\u0119: dobierz 1 kart\u0119 z wierzchu stosu odrzuconych, potem mo\u017Cesz odrzuci\u0107 cz\u0119\u015B\u0107 kart z r\u0119ki. Na IV\u2013V: przejrzyj ca\u0142y stos odrzuconych i we\u017A dowoln\u0105 1 na r\u0119k\u0119."
-    },
-    {
-      id: "niedzwiedz",
-      name: "Szko\u0142a Nied\u017Awiedzia \u2014 zbroja",
-      body: "Raz na walk\u0119, w Twojej turze walki, gdy tarcza = 0: natychmiast dobierz z talii wytrzyma\u0142o\u015Bci; od II tak\u017Ce podnie\u015B tarcz\u0119 (wg ikon)."
-    },
-    {
-      id: "kot",
-      name: "Szko\u0142a Kota \u2014 szybko\u015B\u0107",
-      body: "Raz na walk\u0119, w pierwszej turze walki: podejrzyj wierzchnie karty talii wytrzyma\u0142o\u015Bci; cz\u0119\u015B\u0107 od\u0142\xF3\u017C na wierzch w wybranej kolejno\u015Bci, reszt\u0119 we\u017A na r\u0119k\u0119. Na I, IV i V: wszystkie podejrzane zostaj\u0105 na r\u0119ce."
-    },
-    {
-      id: "zmija",
-      name: "Szko\u0142a \u017Bmii \u2014 zatruta stal",
-      body: "Raz na walk\u0119, gdy przeciwnik odrzuca karty w wyniku Twojego ataku: podejrzyj/przestaw wierzchnie karty jego talii (liczba z toru); od II mo\u017Cesz te\u017C odrzuci\u0107 wskazan\u0105 liczb\u0119 \u2014 wtedy musisz to zrobi\u0107."
-    }
-  ];
-  var COMBAT_STEPS = `
-  <h3>Tura walki wied\u017Amina (4 kroki)</h3>
-  <ol class="checklist">
-    <li><strong>1. Eliksiry / zdolno\u015B\u0107 / ekwipunek i trofea</strong> \u2014 eliksiry \u0142\u0105cznie \u2264 alchemii w ca\u0142ej walce; zdolno\u015B\u0107 raz na walk\u0119; efekty \u201Eraz na walk\u0119\u201D opcjonalne.</li>
-    <li><strong>2. Kombinacja</strong> \u2014 zagraj \u22651 kart\u0119 z r\u0119ki (obowi\u0105zkowe, je\u015Bli masz karty). Kolejne musz\u0105 pasowa\u0107 przed\u0142u\u017Ceniami. 1 karta na r\u0119ce = grasz t\u0119 jedn\u0105.</li>
-    <li><strong>3. Rozpatrzenie</strong> \u2014 suma symboli obra\u017Ce\u0144: potw\xF3r zrzuca tyle kart ze swojej talii walki. Inne symbole (tarcza, \xB1dob\xF3r\u2026) wg ikon.</li>
-    <li><strong>4. Dob\xF3r</strong> \u2014 z talii wytrzyma\u0142o\u015Bci dobierz = poziom <strong>Ataku</strong> \xB1 modyfikatory. Na r\u0119k\u0119. Limit 7 w walce = stop.</li>
-  </ol>
-  <p class="tip"><strong>Co liczy\u0107?</strong> Obra\u017Cenia = liczba mieczy/symboli obra\u017Ce\u0144 na zagranych kartach (i eliksirach). Atak na planszetce = ile kart dobierasz po swoim ataku. Talia potwora = jego \u017Cycie.</p>
-  <p class="tip">Potw\xF3r: szar\u017Ca albo ugryzienie \u2192 odkryj 1 kart\u0119 walki \u2192 efekty. Solo: ko\u015B\u0107 1\u20133 szar\u017Ca / 4\u20136 ugryzienie.</p>
-  <p class="warn">Obra\u017Cenia na Ciebie: najpierw tarcza, potem wierzch Twojej talii wytrzyma\u0142o\u015Bci, potem r\u0119ka (typowo; wyj\u0105tki na karcie potwora).</p>
-`;
-  var LEVEL_UP = `
-  <h3>Awans poziomu wied\u017Amina</h3>
-  <p>Gdy <strong>wszystkie 4</strong> znaczniki atrybut\xF3w s\u0105 <em>powy\u017Cej</em> aktualnego poziomu wied\u017Amina \u2192 awans natychmiast.</p>
-  <ul class="checklist">
-    <li>Na poziom II lub III: dobierz <strong>1</strong> kart\u0119 z talii akcji.</li>
-    <li>Na poziom IV lub V: dobierz <strong>2</strong> karty.</li>
-    <li>Poziom wied\u017Amina nie spada, nawet gdy atrybuty spadn\u0105.</li>
-    <li>Atrybut na V nie mo\u017Ce by\u0107 obni\u017Cony.</li>
-  </ul>
-`;
-  var TRAIL_LEXICON = `
-  <h3>\u017Beton obszaru vs \u017Ceton tropu</h3>
-  <ul class="checklist">
-    <li><strong>\u017Beton obszaru</strong> \u2014 \u017Ceton z puli las/g\xF3ry/woda obok planszy. Jedna strona: nazwa lokacji, druga: symbol terenu.</li>
-    <li><strong>Zadanie tropienia</strong> \u2014 \u017Ceton le\u017Cy u Ciebie <em>nazw\u0105 do g\xF3ry</em> + 1 z\u0142oto na nim. Cel: doj\u015B\u0107 ruchem na t\u0119 lokacj\u0119.</li>
-    <li><strong>\u017Beton tropu</strong> \u2014 po doj\u015Bciu zbierasz z\u0142oto i odwracasz \u017Ceton na symbol terenu. Oznacza, \u017Ce tropisz potwora z tego terenu \u2192 w walce z nim cz\u0119sto <strong>zaczynasz pierwszy</strong>.</li>
-    <li>Max <strong>1 trop na rodzaj terenu</strong>. Konflikt (nowy tego samego) \u2192 stare zadanie/trop znika bez z\u0142ota z \u017Cetonu (FAQ #10).</li>
-  </ul>
-`;
-  var WHAT_WE_DONT_HAVE = `
-  <h3>Czego helper NIE zast\u0105pi</h3>
-  <p class="lead">Nie mam dost\u0119pu do pe\u0142nej bazy ilustracji ani pe\u0142nych tekst\xF3w wszystkich kart z pude\u0142ka.</p>
-  <ul class="checklist">
-    <li><strong>28 kart potwor\xF3w</strong> \u2014 PW i zdolno\u015B\u0107 czytaj z karty na stole (helper prowadzi procedur\u0119 walki).</li>
-    <li><strong>90 kart akcji + startowe</strong> \u2014 teksty i symbole z kart fizycznych.</li>
-    <li><strong>28 eliksir\xF3w, ekwipunek, towarzysze</strong> \u2014 efekty z karty / zdarzenia.</li>
-    <li><strong>72 eksploracji + 56 zdarze\u0144</strong> \u2014 fabularne teksty zawsze z karty (helper m\xF3wi tylko <em>jak</em> czyta\u0107 A/B).</li>
-  </ul>
-  <p class="tip">Tak ma by\u0107: przy stole karty = tre\u015B\u0107, telefon/laptop = kto kiedy co robi i FAQ. Pe\u0142ne skopiowanie wszystkich kart do sieci \u0142ama\u0142oby prawa CDPR/Go On Board.</p>
-`;
-  function lexiconHtml() {
-    const attrs = ATTRIBUTES.map(
-      (a) => `<li><strong>${a.name}</strong><div>${a.body}</div></li>`
-    ).join("");
-    const schools = SCHOOL_SPECIALTIES.map(
-      (s) => `<li><strong>${s.name}</strong><div>${s.body}</div></li>`
-    ).join("");
+  // js/map-prep-pawns.js
+  var MAP_PREP_PAWN_ASSET_V = "3";
+  var REP_TOKEN_FALLBACK = "./img/tokens/reputation/wilk.png";
+  var WITCHER_FIGURE_SRC = "./img/pawns/witcher-figure.png";
+  var PAWN_BASE_RING_SRC = "./img/pawns/base-ring-gray.png";
+  function schoolRepTokenSrc(schoolId) {
+    const id = canonicalSchoolId(schoolId);
+    return `./img/tokens/reputation/${id}.png`;
+  }
+  function schoolRepTokenFallbackSrc() {
+    return REP_TOKEN_FALLBACK;
+  }
+
+  // js/player-board-figure-prep.js
+  var PYRAMID_TOP_IDX = [0, 1];
+  var PYRAMID_BOT_IDX = [2, 3, 4];
+  function playerBoardFigurePrepScenario() {
+    return {
+      title: "Figurka, podstawka i \u017Ceton szko\u0142y",
+      instruction: "Wybierz figurk\u0119 wied\u017Amina z pude\u0142ka. Za\u0142\xF3\u017C na figurk\u0119 podstawk\u0119 w kolorze szko\u0142y oraz wyci\u0105gnij \u017Ceton szko\u0142y wied\u017Ami\u0144skiej."
+    };
+  }
+  function prepImg(src, fallback, className) {
+    const v = MAP_PREP_PAWN_ASSET_V;
+    return `<img class="pb-figure-prep-img ${className}" src="${src}?v=${v}" data-fallback="${fallback}?v=${v}" alt="" decoding="async" />`;
+  }
+  function pyramidHtml(cellFn) {
+    const row = (indices) => `<ul class="pb-figure-pyramid__row" role="list">${indices.map((i) => cellFn(SCHOOLS[i])).join("")}</ul>`;
     return `
-    ${WHAT_WE_DONT_HAVE}
-    <h3>Atrybuty (wszyscy)</h3>
-    <ul class="checklist">${attrs}</ul>
-    ${LEVEL_UP}
-    <h3>Zdolno\u015Bci szk\xF3\u0142 (podstawka)</h3>
-    <ul class="checklist">${schools}</ul>
-    <p class="note">Dok\u0142adne liczby obra\u017Ce\u0144/doboru na ka\u017Cdym poziomie I\u2013V s\u0105 na <strong>planszetce</strong> (ikony obok toru) \u2014 helper nie zast\u0119puje ikon.</p>
-    ${TRAIL_LEXICON}
-    ${COMBAT_STEPS}
-  `;
+    <div class="pb-figure-pyramid">
+      ${row(PYRAMID_TOP_IDX)}
+      ${row(PYRAMID_BOT_IDX)}
+    </div>`;
+  }
+  function basePlateHtml(school) {
+    const v = MAP_PREP_PAWN_ASSET_V;
+    return `
+    <li class="pb-figure-plate pb-figure-plate--base" data-school="${school.id}">
+      <img
+        class="pb-figure-prep-img pb-figure-base-plate-img pb-figure-base-plate-img--${school.id}"
+        src="${PAWN_BASE_RING_SRC}?v=${v}"
+        data-fallback="${PAWN_BASE_RING_SRC}?v=${v}"
+        alt=""
+        decoding="async"
+      />
+    </li>`;
+  }
+  function tokenPlateHtml(school, tokFb) {
+    return `
+    <li class="pb-figure-plate pb-figure-plate--token" data-school="${school.id}">
+      ${prepImg(schoolRepTokenSrc(school.id), tokFb, "pb-figure-plate__token")}
+    </li>`;
+  }
+  function basesPyramidHtml() {
+    return pyramidHtml((s) => basePlateHtml(s));
+  }
+  function tokensPyramidHtml(tokFb) {
+    return pyramidHtml((s) => tokenPlateHtml(s, tokFb));
+  }
+  function playerBoardFigureMainHtml({
+    schoolId,
+    schoolName,
+    playerName,
+    playerSlot,
+    solo
+  }) {
+    const sc = playerBoardFigurePrepScenario();
+    const tokFb = schoolRepTokenFallbackSrc();
+    return `
+    <div class="player-board-figure-layout" id="pb-figure-layout" data-school="${schoolId}">
+      <header class="player-board-prep-panel player-board-figure-caption">
+        <h2 class="player-board-prep-panel__title">${sc.title}</h2>
+        <p class="player-board-prep-panel__body">${sc.instruction}</p>
+      </header>
+      <div class="pb-figure-stage" aria-hidden="true">
+        <div class="pb-figure-col pb-figure-col--pick">
+          <p class="pb-figure-col__label">Figurka</p>
+          <div class="pb-figure-pick-frame">
+            ${prepImg(WITCHER_FIGURE_SRC, WITCHER_FIGURE_SRC, "pb-figure-pick-img")}
+          </div>
+        </div>
+        <div class="pb-figure-col pb-figure-col--stand">
+          <p class="pb-figure-col__label">Podstawki</p>
+          <div class="pb-figure-stand">${basesPyramidHtml()}</div>
+        </div>
+        <div class="pb-figure-col pb-figure-col--tokens">
+          <p class="pb-figure-col__label">\u017Betony szk\xF3\u0142</p>
+          <div class="pb-figure-token-mount">${tokensPyramidHtml(tokFb)}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  function bindPlayerBoardFigureStep(root) {
+    root.querySelectorAll(".pb-figure-prep-img").forEach((img) => {
+      img.addEventListener(
+        "error",
+        () => {
+          const fb = img.getAttribute("data-fallback");
+          if (!fb) return;
+          if (img.src !== fb) img.src = fb;
+        },
+        { once: true }
+      );
+    });
   }
 
   // js/map-data.js
@@ -1935,1751 +1913,6 @@
   var FATIGUE_ON_REP = { 1: 1, 2: 2, 3: 3, 4: 4 };
   function fatigueForReputation(rep) {
     return FATIGUE_ON_REP[rep] ?? 0;
-  }
-
-  // js/guide.js
-  var MOVE_COSTS = [
-    {
-      id: "match",
-      title: "1 karta terenu",
-      short: "Pasuj\u0105cy las / g\xF3ry / woda",
-      cards: 1,
-      gold: 0,
-      tip: "Odrzu\u0107 1 kart\u0119 z ikon\u0105 terenu takiego jak miejsce, na kt\xF3re idziesz."
-    },
-    {
-      id: "wild",
-      title: "1 karta uniwersalna",
-      short: "Woda+las+g\xF3ry na karcie",
-      cards: 1,
-      gold: 0,
-      tip: "Symbol uniwersalny = woda + las + g\xF3ry w jednym okr\u0119gu. Liczy si\u0119 jak dowolny teren. To nie \u017Ceton z planszy."
-    },
-    {
-      id: "two",
-      title: "2 dowolne karty",
-      short: "Bez dopasowania terenu",
-      cards: 2,
-      gold: 0,
-      tip: "Odrzu\u0107 dowolne 2 karty \u2192 mo\u017Cesz wej\u015B\u0107 na dowolnego s\u0105siada."
-    },
-    {
-      id: "card_gold",
-      title: "1 karta + 1 z\u0142oto",
-      short: "Mieszany koszt",
-      cards: 1,
-      gold: 1,
-      tip: "Odrzu\u0107 1 dowoln\u0105 kart\u0119 i zap\u0142a\u0107 1 z\u0142oto \u2192 dowolny s\u0105siad."
-    }
-  ];
-  function moveCostById(id) {
-    return MOVE_COSTS.find((c) => c.id === id);
-  }
-  function applyMoveCost(player, costId) {
-    const cost = moveCostById(costId);
-    if (!player || !cost) return { ok: false, reason: "Brak gracza / kosztu." };
-    if ((player.cards || 0) < cost.cards) {
-      return { ok: false, reason: `Za ma\u0142o kart na r\u0119ce (potrzeba ${cost.cards}).` };
-    }
-    if ((player.gold || 0) < cost.gold) {
-      return { ok: false, reason: `Za ma\u0142o z\u0142ota (potrzeba ${cost.gold}).` };
-    }
-    player.cards = Math.max(0, (player.cards || 0) - cost.cards);
-    player.gold = Math.max(0, (player.gold || 0) - cost.gold);
-    player.lastMoveCost = costId;
-    return { ok: true, cost };
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function terrainChip(terrainId) {
-    const t = TERRAIN[terrainId];
-    if (!t) return "";
-    const ico = terrainId === "forest" ? ICO.forest() : terrainId === "mountain" ? ICO.mountain() : terrainId === "water" ? ICO.water() : "";
-    return `${ico} <strong>${escapeHtml(t.label)}</strong>`;
-  }
-  function moveCostChooserHtml({ fromLoc, toLoc, playerName, selectedCostId }) {
-    const to = toLoc;
-    const from = fromLoc;
-    const terrainLine = to ? `Cel: <strong>${escapeHtml(to.name)}</strong> (#${to.number}) \u2014 teren ${terrainChip(to.terrain)}` : "Wybierz s\u0105siada na mapie / li\u015Bcie.";
-    const fromLine = from ? `Z: <strong>${escapeHtml(from.name)}</strong> (#${from.number})` : "";
-    return `
-    <div class="guide-box guide-move" role="region" aria-label="Koszt ruchu">
-      <p class="step-kicker" style="margin:0">Ruch \u2014 prowadzenie</p>
-      <h3 style="margin:0.25rem 0 0.4rem">Dok\u0105d idziesz${playerName ? `, ${escapeHtml(playerName)}` : ""}?</h3>
-      <p class="lead" style="margin:0">${terrainLine}</p>
-      ${fromLine ? `<p class="note" style="margin:0.35rem 0 0">${fromLine}</p>` : ""}
-      <p class="tip" style="margin:0.65rem 0 0.4rem"><strong>Za ten ruch musisz co\u015B odda\u0107.</strong> Kliknij, co wybra\u0142e\u015B z r\u0119ki:</p>
-      <div class="choice-grid move-cost-grid">
-        ${MOVE_COSTS.map(
-      (c) => `
-          <button type="button" class="choice ${selectedCostId === c.id ? "active" : ""}" data-move-cost="${c.id}">
-            <strong>${escapeHtml(c.title)}</strong>
-            <span>${escapeHtml(c.short)}</span>
-            <span class="note">${escapeHtml(c.tip)}</span>
-          </button>`
-    ).join("")}
-      </div>
-      <p class="note" style="margin:0.55rem 0 0">Po klikni\u0119ciu helper odejmie karty / z\u0142oto w trackerze (mo\u017Cesz potem poprawi\u0107 r\u0119cznie).</p>
-    </div>
-  `;
-  }
-  function affordNote(player, cardsNeed, goldNeed) {
-    if (!player) return "";
-    const cardsOk = (player.cards || 0) >= cardsNeed;
-    const goldOk = (player.gold || 0) >= goldNeed;
-    if (cardsOk && goldOk) return "masz zasoby";
-    const miss = [];
-    if (!cardsOk) miss.push(`kart ${player.cards || 0}/${cardsNeed}`);
-    if (!goldOk) miss.push(`z\u0142ota ${player.gold || 0}/${goldNeed}`);
-    return `uwaga: ${miss.join(", ")}`;
-  }
-  function destinationPreviewHtml(toId, { player, roster = [], monsters = {} } = {}) {
-    const to = locById(toId);
-    if (!to) return `<p class="warn">Nieznane pole.</p>`;
-    const mon = monsters?.[toId];
-    const others = (roster || []).filter(
-      (r) => r && r !== player && r.locationId === toId
-    );
-    const t = TERRAIN[to.terrain];
-    return `
-    <div class="guide-box guide-dest-preview">
-      <p class="step-kicker" style="margin:0">Cel ruchu</p>
-      <h3 style="margin:0.25rem 0 0.4rem">${escapeHtml(to.name)} (#${to.number})</h3>
-      <p class="lead" style="margin:0">Teren: ${terrainChip(to.terrain)} ${t ? escapeHtml(t.label) : ""}</p>
-      ${mon ? `<p class="warn" style="margin-top:0.55rem">${ICO.monster()} <strong>Potw\xF3r</strong> na polu${mon.level ? ` (poz. ${escapeHtml(String(mon.level))})` : ""} \u2014 w fazie II mo\u017Cesz walczy\u0107 (opcjonalnie).</p>` : ""}
-      ${others.length ? `<p class="warn" style="margin-top:0.55rem">${ICO.specialty()} Inny wied\u017Amin: <strong>${others.map((o) => escapeHtml(o.name)).join(", ")}</strong> \u2014 mo\u017Cliwa walka / poker.</p>` : ""}
-      ${locationActionGuideHtml(to, { heading: "Co zyskasz / zrobisz na tym polu (znak)" })}
-    </div>
-  `;
-  }
-  function mapLocPopupHtml(toId, { player, roster = [], monsters = {} } = {}) {
-    const to = locById(toId);
-    if (!to) return "";
-    const mon = monsters?.[toId];
-    const others = (roster || []).filter(
-      (r) => r && r !== player && r.locationId === toId
-    );
-    const t = TERRAIN[to.terrain];
-    const hint = actionHintFor(to) || LOCATION_ACTION_HINTS[to.actionKey] || "";
-    return `
-    <p class="step-kicker" style="margin:0">Cel ruchu</p>
-    <h3 class="map-loc-popup-title">${escapeHtml(to.name)} <span class="loc-num">#${to.number}</span></h3>
-    <p class="map-loc-popup-meta">${terrainChip(to.terrain)} ${t ? escapeHtml(t.label) : ""}${to.school ? " \xB7 szko\u0142a" : ""}</p>
-    ${to.actionKey ? `<div class="map-loc-popup-action">${actionIconHtml(to.actionKey, { width: 100, height: 34 })}${hint ? `<p class="map-loc-popup-hint">${escapeHtml(hint)}</p>` : ""}</div>` : hint ? `<p class="map-loc-popup-hint"><strong>Znak:</strong> ${escapeHtml(hint)}</p>` : ""}
-    ${mon ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.monster()} <strong>Potw\xF3r</strong>${mon.level ? ` (poz. ${escapeHtml(String(mon.level))})` : ""} \u2014 walka opcjonalna (faza II)</p>` : ""}
-    ${others.length ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.specialty()} Inny wied\u017Amin: <strong>${others.map((o) => escapeHtml(o.name)).join(", ")}</strong></p>` : ""}
-  `;
-  }
-  function neighborPickerHtml(fromId, { player, monsters } = {}) {
-    const from = locById(fromId);
-    if (!from) {
-      return `<p class="warn">Brak pozycji startowej \u2014 wr\xF3\u0107 do <strong>Gracze</strong> i wybierz szko\u0142\u0119 (pionek stawia si\u0119 automatycznie na szkole).</p>`;
-    }
-    const neigh = neighborsOf(fromId).map((id) => locById(id)).filter(Boolean);
-    if (!neigh.length) {
-      return `<p class="warn">Brak s\u0105siad\xF3w w schemacie \u2014 sprawd\u017A map\u0119.</p>`;
-    }
-    const hasMonster = (locId) => {
-      const m = monsters?.[locId];
-      return Boolean(m && m.count > 0);
-    };
-    return `
-    <div class="guide-box guide-destinations">
-      <p class="step-kicker" style="margin:0">Dok\u0105d mo\u017Cesz i\u015B\u0107</p>
-      <p class="lead" style="margin:0.35rem 0 0">Stoisz na <strong>${escapeHtml(from.name)}</strong> (#${from.number}). Kliknij cel \u2014 potem wybierzesz dok\u0142adny koszt z r\u0119ki.</p>
-      <div class="choice-grid move-dest-grid">
-        ${neigh.map((n) => {
-      const t = TERRAIN[n.terrain];
-      const tLabel = t?.label || n.terrain;
-      const matchOk = affordNote(player, 1, 0);
-      const twoOk = affordNote(player, 2, 0);
-      const mixOk = affordNote(player, 1, 1);
-      const mon = hasMonster(n.id);
-      return `
-          <button type="button" class="choice ${mon ? "choice-danger" : ""}" data-move-to="${n.id}">
-            <strong>${escapeHtml(n.name)} (#${n.number})${mon ? ` ${ICO.monster()} potw\xF3r!` : ""}</strong>
-            <span>Teren celu: ${terrainChip(n.terrain)}</span>
-            ${mon ? `<span class="warn" style="margin:0.25rem 0 0">Wej\u015Bcie \u2192 helper odpala walk\u0119</span>` : ""}
-            <span class="move-cost-lines">
-              <span><strong>Najtaniej:</strong> 1 karta ${escapeHtml(tLabel)} <em>(${escapeHtml(matchOk)})</em></span>
-              <span><strong>Albo:</strong> 1\xD7 uniwersalna (3 tereny) \xB7 2 dowolne karty <em>(${escapeHtml(twoOk)})</em> \xB7 1 karta + 1 z\u0142oto <em>(${escapeHtml(mixOk)})</em></span>
-            </span>
-          </button>`;
-    }).join("")}
-      </div>
-      <p class="note" style="margin:0.55rem 0 0">Na mapie (St\xF3\u0142) s\u0105siedzi s\u0105 pod\u015Bwietleni na z\u0142oto, gdy ruszasz si\u0119 w turze.</p>
-    </div>
-  `;
-  }
-  function locationActionSteps(loc) {
-    if (!loc) {
-      return {
-        title: "Brak lokacji",
-        steps: ["Wybierz szko\u0142\u0119 w zak\u0142adce Gracze \u2014 pionek staje na szkole startowej."],
-        tip: ""
-      };
-    }
-    const key = loc.actionKey;
-    const hint = actionHintFor(loc) || LOCATION_ACTION_HINTS[key] || "";
-    const base = {
-      title: `${loc.name} (#${loc.number})`,
-      tip: hint
-    };
-    switch (key) {
-      case "schoolTrain":
-        return {
-          ...base,
-          steps: [
-            "To szko\u0142a wied\u017Ami\u0144ska (z\u0142oty punkt na schemacie).",
-            "Wybierz 1 atrybut: atak / obrona / alchemia / specjalno\u015B\u0107.",
-            "Zap\u0142a\u0107 z\u0142otem tyle, ile wynosi poziom DOCZELOWY (aktualny + 1) \u2014 zwykle 2, 3, 4 albo 5.",
-            "Podnie\u015B ten atrybut o +1 na swojej planszy.",
-            "Zdolno\u015B\u0107 szko\u0142y: tylko we w\u0142asnej szkole (nie w cudzej).",
-            "T\u0119 konkretn\u0105 akcj\u0119 szko\u0142y najwy\u017Cej raz na tur\u0119."
-          ]
-        };
-      case "trailGold":
-        return {
-          ...base,
-          steps: [
-            "We\u017A od razu +1 z\u0142oto do kieszeni (z banku).",
-            "Opcja \u2014 zadanie tropienia: zap\u0142a\u0107 1 z\u0142oto.",
-            "Dobierz \u017Ceton obszaru o terenie takim, jak teren POTWORA, kt\xF3rego tropisz (las/g\xF3ry/woda).",
-            "Po\u0142\xF3\u017C \u017Ceton nazw\u0105 do g\xF3ry na planszy gracza i po\u0142\xF3\u017C na nim 1 z\u0142oto z banku.",
-            "Gdy wejdziesz p\xF3\u017Aniej na t\u0119 nazw\u0119: zbierz z\u0142oto z \u017Cetonu i odwr\xF3\u0107 go \u2192 masz \u017Ceton tropu.",
-            "Limit: max 1 trop na ka\u017Cdy rodzaj terenu."
-          ]
-        };
-      case "dicePoker":
-        return {
-          ...base,
-          steps: [
-            "To pole z ikon\u0105 ko\u015Bci \u2014 poker z miejscowymi.",
-            "Multi: Ty i przeciwnik musicie mie\u0107 \u22651 z\u0142oto; wp\u0142acacie do puli (zwykle + bank).",
-            "Solo: wp\u0142a\u0107 1 z\u0142oto i graj vs tabela na karcie pomocy solo.",
-            "Rzu\u0107 5 ko\u015B\u0107mi, raz mo\u017Cesz przerzuci\u0107 wybrane.",
-            "Najlepszy uk\u0142ad wygrywa pul\u0119 / nagrod\u0119 z tabeli.",
-            "Uwaga: po pokerze z kim\u015B nie walczysz z nim w fazie II tej tury."
-          ]
-        };
-      case "cleanPool":
-        return {
-          ...base,
-          steps: [
-            "G\xF3ra znaku: masz 0 z\u0142ota \u2192 bierz +1 z\u0142oto (darmowy zastrzyk).",
-            "D\xF3\u0142 znaku: pola puli kart z p\u0142omieniem = mo\u017Cesz SPALI\u0106 (usun\u0105\u0107 z gry) kart\u0119 z tego slotu.",
-            "Na Wyzimie zwykle mo\u017Cesz wyczy\u015Bci\u0107 wskazane sloty (2. i 4.) \u2014 sp\xF3jrz na plansz\u0119.",
-            "Akcj\u0119 obszaru (ka\u017Cdy konkretny efekt) najwy\u017Cej raz na tur\u0119."
-          ]
-        };
-      case "trashDraw":
-        return {
-          ...base,
-          steps: [
-            "Znak Vengerberg: usu\u0144 1 kart\u0119 z r\u0119ki z gry.",
-            "Kup 1 kart\u0119 z odkrytej puli na planszy.",
-            "Koszt nowej karty mo\u017Ce by\u0107 ni\u017Cszy, r\xF3wny albo o 1 wy\u017Cszy od kosztu usuni\u0119tej.",
-            "We\u017A kupion\u0105 kart\u0119 na r\u0119k\u0119. Raz na tur\u0119."
-          ]
-        };
-      case "defenseLevel":
-        return {
-          ...base,
-          steps: [
-            "Znak: OBRONA \u2264 POZIOM wied\u017Amina.",
-            "Sprawd\u017A: Tw\xF3j poziom obrony \u2264 Tw\xF3j poziom postaci?",
-            "Je\u015Bli tak \u2192 +1 obrona (i zwykle tarcza dogania obron\u0119 przy awansie).",
-            "Je\u015Bli nie \u2014 nie bierzesz darmowego treningu obrony tutaj."
-          ]
-        };
-      case "alchemyLevel":
-        return {
-          ...base,
-          steps: [
-            "Znak: + alchemia (tylko gdy alchemia \u2264 poziom wied\u017Amina).",
-            "Podnie\u015B alchemi\u0119 o +1.",
-            "Przy ka\u017Cdym podniesieniu alchemii dobierasz 1 kart\u0119 eliksiru (limit 4)."
-          ]
-        };
-      case "specialtyLevel":
-        return {
-          ...base,
-          steps: [
-            "Znak: ZDOLNO\u015A\u0106 SPECJALNA \u2264 POZIOM.",
-            "Je\u015Bli specjalno\u015B\u0107 \u2264 poziom wied\u017Amina \u2192 +1 specjalno\u015B\u0107.",
-            "Raz na tur\u0119 ta akcja."
-          ]
-        };
-      case "attackLevel":
-        return {
-          ...base,
-          steps: [
-            "Znak: ATAK \u2264 POZIOM.",
-            "Je\u015Bli atak \u2264 poziom wied\u017Amina \u2192 +1 atak.",
-            "Darmowy trening \u2014 bez p\u0142acenia z\u0142otem (w przeciwie\u0144stwie do szko\u0142y)."
-          ]
-        };
-      case "gainElixir":
-      case "cintraElixir":
-        return {
-          ...base,
-          steps: [
-            "Znak: + eliksir (butelka / karta eliksiru).",
-            "Dobierz 1 kart\u0119 eliksiru.",
-            "Limit: maksymalnie 4 eliksiry.",
-            "Raz na tur\u0119 ta akcja obszaru."
-          ]
-        };
-      default:
-        return {
-          ...base,
-          steps: [
-            hint || "Sp\xF3jrz na znak pod nazw\u0105 lokacji na planszy i wykonaj go raz w tej turze.",
-            "Potem mo\u017Cesz i\u015B\u0107 dalej (kolejny ruch za kart\u0119) albo przej\u015B\u0107 do fazy II."
-          ]
-        };
-    }
-  }
-  function locationActionGuideHtml(loc, { heading = "Akcja tego pola (znaki na planszy)" } = {}) {
-    const g = locationActionSteps(loc);
-    if (!loc) {
-      return `<div class="guide-box"><p class="warn">${escapeHtml(g.steps[0])}</p></div>`;
-    }
-    const icon = actionIconHtml(loc.actionKey, { width: 120, height: 40 });
-    return `
-    <div class="guide-box guide-loc" role="region" aria-label="Akcja obszaru">
-      <p class="step-kicker" style="margin:0">${escapeHtml(heading)}</p>
-      <h3 style="margin:0.25rem 0 0.35rem">${escapeHtml(g.title)}</h3>
-      ${icon ? `<div class="loc-action-icon" title="Znak pod nazw\u0105 miejscowo\u015Bci">${icon}</div>` : ""}
-      ${g.tip ? `<p class="lead" style="margin:0.35rem 0 0">${escapeHtml(g.tip)}</p>` : ""}
-      <ol class="checklist guide-steps">
-        ${g.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
-      </ol>
-      <p class="note">Akcja <strong>fazy I</strong> \u2014 opcjonalna, raz na tur\u0119. Nie myl z faz\u0105 II (walka / medytacja / eksploracja).</p>
-    </div>
-  `;
-  }
-  function exploreGuideHtml(loc, isSolo2) {
-    const locBlock = loc ? locationActionGuideHtml(loc, {
-      heading: "Znaki na Twoim polu (przypomnienie \u2014 to by\u0142a faza I)"
-    }) : `<p class="note">Nie masz ustawionej lokacji \u2014 ustaw j\u0105 na Stole, \u017Ceby zobaczy\u0107 znaki pola.</p>`;
-    const phase2 = isSolo2 ? `
-      <ol class="checklist">
-        <li>Wybierz tali\u0119: <strong>miasto</strong> albo <strong>dzikie ost\u0119py</strong>.</li>
-        <li>Dobierz kart\u0119 sam.</li>
-        <li>Zakryj rezultaty \u2014 czytasz tylko wst\u0119p i 2 opcje.</li>
-        <li>Wybierz opcj\u0119; odczytaj tylko jej rezultat.</li>
-        <li>Karta do pude\u0142ka albo zostaje jako <strong>zadanie</strong>.</li>
-      </ol>` : `
-      <ol class="checklist">
-        <li>Wybierz: <strong>miasto</strong> albo <strong>dzikie ost\u0119py</strong>.</li>
-        <li>Gracz po prawej dobiera i czyta wst\u0119p + opcje <strong>bez</strong> rezultat\xF3w.</li>
-        <li>Ty wybierasz; s\u0142yszysz tylko wybrany rezultat.</li>
-        <li>Karta do pude\u0142ka albo jako <strong>zadanie</strong>.</li>
-      </ol>`;
-    return `
-    <div class="guide-box guide-explore">
-      <p class="step-kicker" style="margin:0">Faza II \u2014 eksploracja (karty)</p>
-      <h3 style="margin:0.25rem 0 0.4rem">Co robi\u0107 teraz</h3>
-      <p class="lead" style="margin:0">To NIE jest znak pod nazw\u0105 miasta \u2014 to dob\xF3r karty eksploracji.</p>
-      ${phase2}
-      <p class="note">Brak z\u0142ota na opcj\u0119 z karty = nie mo\u017Cesz jej wybra\u0107.</p>
-    </div>
-    ${locBlock}
-  `;
-  }
-  function nowDoingGuideHtml(player, { isSolo: isSolo2 = false } = {}) {
-    const loc = player?.locationId ? locById(player.locationId) : null;
-    const now = player?.nowDoing || "czekam";
-    if (now === "faza1") {
-      return `
-      <div class="guide-inline">
-        <p class="tip"><strong>Faza I:</strong> najpierw obowi\u0105zkowy ruch (albo od razu faza II). Po ruchu mo\u017Cesz zrobi\u0107 akcj\u0119 ze znaku na polu.</p>
-        ${loc ? locationActionGuideHtml(loc) : `<p class="warn">Brak lokacji \u2014 wr\xF3\u0107 do Graczy i wybierz szko\u0142\u0119 (start automatyczny).</p>`}
-      </div>`;
-    }
-    if (now === "poker") {
-      if (loc) {
-        return `<div class="guide-inline">${locationActionGuideHtml(loc, { heading: "Poker / akcja obszaru na tym polu" })}</div>`;
-      }
-      return `
-      <div class="guide-inline">
-        <div class="guide-box">
-          <p class="tip">Je\u015Bli pole ma ko\u015Bci \u2014 graj poker. Inaczej wykonaj znak obszaru (patrz panel lokacji).</p>
-        </div>
-      </div>`;
-    }
-    if (now === "eksploracja") {
-      return `<div class="guide-inline">${exploreGuideHtml(loc, isSolo2)}</div>`;
-    }
-    if (now === "walka") {
-      return `<div class="guide-inline"><p class="tip">Id\u017A do zak\u0142adki <strong>Tura \u2192 Faza II \u2192 Walka</strong> \u2014 tam jest rozpisane krok po kroku (tarcza \u2260 \u015Bmier\u0107).</p></div>`;
-    }
-    if (now === "medytacja") {
-      return `<div class="guide-inline"><p class="tip">Medytacja tylko przy atrybucie na <strong>V</strong> + wolne trofeum. Potem zwykle +reputacja i zm\u0119czenie.</p></div>`;
-    }
-    if (now === "faza3") {
-      return `<div class="guide-inline"><p class="tip">Faza III: odrzu\u0107 ile chcesz \u2192 dobierz do <strong>3</strong> \u2192 kup 1 z puli (p\u0142acisz odrzuceniem kart, nie z\u0142otem).</p></div>`;
-    }
-    return "";
-  }
-
-  // js/board.js
-  var NOW_ACTIONS = [
-    { id: "czekam", label: "Czeka" },
-    { id: "faza1", label: "Faza I \u2014 ruch" },
-    { id: "poker", label: "Poker / akcja obszaru" },
-    { id: "walka", label: "Walka" },
-    { id: "medytacja", label: "Medytacja" },
-    { id: "eksploracja", label: "Eksploracja" },
-    { id: "faza3", label: "Faza III \u2014 dob\xF3r/kupno" }
-  ];
-  function defaultBoard() {
-    return {
-      rotation: 0,
-      tool: "select",
-      selectedLoc: null,
-      placePlayer: 0,
-      /** locId → { count, label?, level? } */
-      monsters: {},
-      /** { playerIdx, fromId, toId, costId? } — komunikat po przesunięciu pionka */
-      movePrompt: null,
-      /** Podświetl sąsiadów z tej lokacji (ruch) */
-      highlightFrom: null,
-      /** Poziom ustawiany przyciskiem I/II/III przed oznaczeniem */
-      pendingMonsterLevel: "I",
-      /** Komunikat gdy kliknięcie nie może postawić potwora (ten sam teren itd.) */
-      placeError: null,
-      /** schoolId ostatniego gracza, który zdobył dany poziom reputacji (0–4) */
-      repClaim: [null, null, null, null, null],
-      /** Flaga poziomu na mapie (I / II / III) */
-      roundFlag: "I"
-    };
-  }
-  function noteReputationClaim(board, schoolId, level) {
-    if (!board) return;
-    if (!Array.isArray(board.repClaim) || board.repClaim.length !== 5) {
-      board.repClaim = [null, null, null, null, null];
-    }
-    const n = Math.min(4, Math.max(0, Math.round(Number(level) || 0)));
-    board.repClaim[n] = schoolId || null;
-  }
-  function ensureReputationClaims(board, roster = []) {
-    if (!board) return false;
-    if (!Array.isArray(board.repClaim) || board.repClaim.length !== 5) {
-      board.repClaim = [null, null, null, null, null];
-    }
-    const byRep = { 0: [], 1: [], 2: [], 3: [], 4: [] };
-    for (const p of roster || []) {
-      if (!p) continue;
-      const r = Math.min(4, Math.max(0, Math.round(Number(p.reputation) || 0)));
-      byRep[r].push(p.schoolId || "wilk");
-    }
-    let changed = false;
-    for (let n = 0; n <= 4; n++) {
-      const present = byRep[n];
-      if (!present.length) continue;
-      const cur = board.repClaim[n];
-      const needFresh = n === 0 ? !cur || !present.includes(cur) : !cur;
-      if (needFresh) {
-        board.repClaim[n] = present[Math.floor(Math.random() * present.length)];
-        changed = true;
-      }
-    }
-    return changed;
-  }
-  function monsterAt(board, locId) {
-    const m = board?.monsters?.[locId];
-    if (!m || !(m.count > 0)) return null;
-    return m;
-  }
-  function monstersList(board) {
-    return Object.entries(board?.monsters || {}).filter(([, m]) => m && m.count > 0).map(([id, m]) => ({ id, loc: locById(id), ...m })).filter((row) => row.loc);
-  }
-  var MONSTER_TERRAINS = ["forest", "mountain", "water"];
-  function locationsForTerrain(terrain) {
-    return LOCATIONS.filter(
-      (l) => l.terrain === terrain && typeof l.number === "number" && l.number !== 0 && l.id !== "behelt-nar"
-    ).sort((a, b) => a.number - b.number);
-  }
-  function monsterOccupyingTerrain(board, terrain, exceptLocId = null) {
-    if (!terrain || !MONSTER_TERRAINS.includes(terrain)) return null;
-    for (const row of monstersList(board)) {
-      if (exceptLocId && row.id === exceptLocId) continue;
-      if (row.loc.terrain === terrain) return row;
-    }
-    return null;
-  }
-  function setMonsterForTerrain(board, terrain, locId, { level } = {}) {
-    if (!MONSTER_TERRAINS.includes(terrain)) {
-      return { ok: false, reason: "Nieznany teren." };
-    }
-    for (const row of monstersList(board)) {
-      if (row.loc.terrain === terrain) delete board.monsters[row.id];
-    }
-    if (!locId) {
-      board.placeError = null;
-      return { ok: true, cleared: true };
-    }
-    const loc = locById(locId);
-    if (!loc) return { ok: false, reason: "Nieznana lokacja." };
-    if (loc.terrain !== terrain) {
-      return {
-        ok: false,
-        reason: `Lokacja ${loc.name} to ${TERRAIN[loc.terrain]?.label || loc.terrain}, nie ${TERRAIN[terrain]?.label || terrain}.`
-      };
-    }
-    if (loc.number === 0 || loc.id === "behelt-nar") {
-      return {
-        ok: false,
-        reason: "Behelt Nar (0) nie ma \u017Cetonu obszaru \u2014 tu nie stawia si\u0119 potwor\xF3w."
-      };
-    }
-    const lv = level || "I";
-    board.monsters[locId] = { count: 1, level: lv, label: `Poz. ${lv}` };
-    board.placeError = null;
-    board.selectedLoc = locId;
-    return { ok: true, placed: true, level: lv, loc };
-  }
-  function cycleMonsterTerrain(board, terrain, delta) {
-    const opts = locationsForTerrain(terrain);
-    if (!opts.length) return { ok: false, reason: "Brak lokacji." };
-    const cur = monsterOccupyingTerrain(board, terrain);
-    let idx = cur ? opts.findIndex((l) => l.id === cur.id) : -1;
-    if (idx < 0) idx = delta > 0 ? -1 : 0;
-    const next = opts[(idx + delta + opts.length) % opts.length];
-    const level = cur?.level || "I";
-    return setMonsterForTerrain(board, terrain, next.id, { level });
-  }
-  function setMonsterTerrainByNumber(board, terrain, number, { level } = {}) {
-    const n = Number(number);
-    if (!Number.isFinite(n)) return { ok: false, reason: "Podaj numer obszaru." };
-    const loc = locationsForTerrain(terrain).find((l) => l.number === n);
-    if (!loc) {
-      const nums = locationsForTerrain(terrain).map((l) => l.number).join(", ");
-      return {
-        ok: false,
-        reason: `Numer ${n} nie nale\u017Cy do terenu \u201E${TERRAIN[terrain]?.label || terrain}\u201D. Dost\u0119pne: ${nums}.`
-      };
-    }
-    const cur = monsterOccupyingTerrain(board, terrain);
-    return setMonsterForTerrain(board, terrain, loc.id, {
-      level: level || cur?.level || "I"
-    });
-  }
-  function setMonsterTerrainLevel(board, terrain, level) {
-    const cur = monsterOccupyingTerrain(board, terrain);
-    if (!cur) {
-      return { ok: false, reason: "Najpierw wybierz numer obszaru dla tego terenu." };
-    }
-    board.monsters[cur.id] = {
-      count: 1,
-      level,
-      label: `Poz. ${level}`
-    };
-    board.placeError = null;
-    return { ok: true };
-  }
-  function sanitizeMonstersUniqueTerrain(board) {
-    if (!board?.monsters) return board;
-    const seen = /* @__PURE__ */ Object.create(null);
-    for (const id of Object.keys(board.monsters)) {
-      const m = board.monsters[id];
-      if (!m || !(m.count > 0)) {
-        delete board.monsters[id];
-        continue;
-      }
-      const loc = locById(id);
-      if (!loc || !MONSTER_TERRAINS.includes(loc.terrain) || loc.number === 0 || loc.id === "behelt-nar") {
-        delete board.monsters[id];
-        continue;
-      }
-      m.count = 1;
-      if (seen[loc.terrain]) {
-        delete board.monsters[id];
-        continue;
-      }
-      seen[loc.terrain] = id;
-    }
-    return board;
-  }
-  function monsterEncounterHtml(loc, monster) {
-    if (!loc || !monster) return "";
-    const lvl = monster.level ? ` poziom ${escapeHtml2(String(monster.level))}` : "";
-    const label = monster.label ? ` \u2014 ${escapeHtml2(monster.label)}` : "";
-    return `
-    <div class="guide-box guide-monster-hit" role="status">
-      <p class="step-kicker" style="margin:0">${ICO.monster()} Potw\xF3r na polu</p>
-      <h3 style="margin:0.25rem 0 0.4rem">Na <strong>${escapeHtml2(loc.name)}</strong> stoi potw\xF3r${lvl}${label}</h3>
-      <p class="lead" style="margin:0"><strong>Nie musisz walczy\u0107.</strong> Instrukcja: w fazie II <em>mo\u017Cesz</em> walczy\u0107 z potworem na tym samym obszarze \u2014 albo wybra\u0107 medytacj\u0119 albo eksploracj\u0119.</p>
-      <p class="note" style="margin:0.45rem 0 0">Teraz jeste\u015B w fazie I: akcje obszaru / zadanie / kolejny ruch. Walka dopiero gdy w fazie II wybierzesz \u201EWalka\u201D.</p>
-    </div>
-  `;
-  }
-  var LEVEL_ORDER = ["I", "II", "III"];
-  function normalizeMonsterLevel(level) {
-    const s = String(level || "I").toUpperCase();
-    if (s === "1" || s === "I") return "I";
-    if (s === "2" || s === "II") return "II";
-    if (s === "3" || s === "III") return "III";
-    return LEVEL_ORDER.includes(s) ? s : "I";
-  }
-  function nextMonsterLevelAfterDefeat(level) {
-    const lv = normalizeMonsterLevel(level);
-    if (lv === "I") return "II";
-    return "III";
-  }
-  function monsterFightOutcomePlan({ kind, isSolo: isSolo2, loc, monster }) {
-    const level = normalizeMonsterLevel(monster?.level);
-    const terrain = loc?.terrain || null;
-    const terrainLabel = terrain ? TERRAIN[terrain]?.label || terrain : "?";
-    const locName = loc?.name || "?";
-    if (kind === "loss") {
-      return {
-        kind,
-        removeMonster: false,
-        needsSpawn: false,
-        spawnLevel: null,
-        terrain,
-        terrainLabel,
-        oldLevel: level,
-        title: "Kl\u0119ska",
-        summary: `Potw\xF3r zostaje na <strong>${escapeHtml2(locName)}</strong> (poz. ${escapeHtml2(
-          level
-        )}). Przy nast\u0119pnej walce ma pe\u0142n\u0105 tali\u0119. We\u017A trop terenu \u201E${escapeHtml2(
-          terrainLabel
-        )}\u201D (je\u015Bli go nie masz) i 1 kart\u0119 kosztu 0 na odrzucone; w tej turze w fazie III dobierasz o 1 mniej.`,
-        spawnHint: null
-      };
-    }
-    if (kind === "drive") {
-      return {
-        kind,
-        removeMonster: true,
-        needsSpawn: true,
-        spawnLevel: level,
-        terrain,
-        terrainLabel,
-        oldLevel: level,
-        title: "Odp\u0119dzenie",
-        summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(locName)}</strong>. +2 z\u0142ota; \u017Ceton na stos odp\u0119dzonych; 1 karta kosztu 0 na odrzucone.`,
-        spawnHint: `Nowy potw\xF3r: <strong>poziom ${escapeHtml2(
-          level
-        )}</strong> (ten sam), teren <strong>${escapeHtml2(
-          terrainLabel
-        )}</strong> \u2014 dobierz \u017Ceton obszaru tego terenu i wpisz jego numer poni\u017Cej.`
-      };
-    }
-    if (isSolo2) {
-      return {
-        kind,
-        removeMonster: true,
-        needsSpawn: false,
-        spawnLevel: null,
-        terrain,
-        terrainLabel,
-        oldLevel: level,
-        title: "Pokonanie (solo)",
-        summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(
-          locName
-        )}</strong>. +2 z\u0142ota, trofeum, +reputacja, zm\u0119czenie. <strong>Solo: nie dobierasz nowego potwora</strong> po pokonaniu.`,
-        spawnHint: null
-      };
-    }
-    const nextLv = nextMonsterLevelAfterDefeat(level);
-    return {
-      kind,
-      removeMonster: true,
-      needsSpawn: true,
-      spawnLevel: nextLv,
-      terrain,
-      terrainLabel,
-      oldLevel: level,
-      title: "Pokonanie",
-      summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(
-        locName
-      )}</strong>. +2 z\u0142ota, trofeum, +reputacja, zm\u0119czenie.`,
-      spawnHint: `Nowy potw\xF3r: <strong>poziom ${escapeHtml2(
-        nextLv
-      )}</strong> (${escapeHtml2(level)}\u2192${escapeHtml2(
-        nextLv
-      )}), teren <strong>${escapeHtml2(
-        terrainLabel
-      )}</strong> \u2014 dobierz \u017Ceton obszaru tego samego terenu i wpisz numer poni\u017Cej.`
-    };
-  }
-  function monsterSpawnSlotHtml(board, { terrain, level }) {
-    if (!terrain || !MONSTER_TERRAINS.includes(terrain)) return "";
-    const t = TERRAIN[terrain];
-    const opts = locationsForTerrain(terrain);
-    const cur = monsterOccupyingTerrain(board, terrain);
-    const num = cur?.loc?.number;
-    const name = cur?.loc?.name || "\u2014 ustaw numer z \u017Cetonu \u2014";
-    const lv = normalizeMonsterLevel(level || cur?.level || "I");
-    return `
-    <div class="monster-terrain-slot is-filled monster-spawn-slot" data-terrain-slot="${terrain}">
-      <div class="monster-terrain-head">
-        <span class="monster-terrain-ico">${terrainIcon(terrain)}</span>
-        <strong>${escapeHtml2(t.label)}</strong>
-        <span class="monster-terrain-meta">${escapeHtml2(name)} \xB7 poz. ${escapeHtml2(lv)}</span>
-      </div>
-      <div class="monster-terrain-pick" role="group" aria-label="Numer nowego obszaru">
-        <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="-1" title="Poprzedni">\u25C0</button>
-        <input type="number" class="monster-num-input" data-monster-num="${terrain}" min="0" max="18" inputmode="numeric" value="${num != null ? escapeHtml2(String(num)) : ""}" placeholder="#" aria-label="Numer obszaru" />
-        <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="1" title="Nast\u0119pny">\u25B6</button>
-      </div>
-      <p class="note monster-terrain-hint">Poziom ustawiony na <strong>${escapeHtml2(
-      lv
-    )}</strong> \xB7 numery: ${opts.map((l) => l.number).join(", ")}</p>
-    </div>
-  `;
-  }
-  function monstersPanelHtml(board) {
-    const levels = ["I", "II", "III"];
-    const slots = MONSTER_TERRAINS.map((terrain) => {
-      const t = TERRAIN[terrain];
-      const opts = locationsForTerrain(terrain);
-      const cur = monsterOccupyingTerrain(board, terrain);
-      const num = cur?.loc?.number;
-      const name = cur?.loc?.name || "\u2014 wybierz numer \u2014";
-      const level = cur?.level || "I";
-      const filled = Boolean(cur);
-      return `
-      <div class="monster-terrain-slot ${filled ? "is-filled" : "is-empty"}" data-terrain-slot="${terrain}">
-        <div class="monster-terrain-head">
-          <span class="monster-terrain-ico">${terrainIcon(terrain)}</span>
-          <strong>${escapeHtml2(t.label)}</strong>
-          <span class="monster-terrain-meta">${filled ? escapeHtml2(name) : "brak \u017Cetonu"}</span>
-        </div>
-        <div class="monster-terrain-pick" role="group" aria-label="Numer obszaru: ${escapeHtml2(t.label)}">
-          <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="-1" title="Poprzedni obszar">\u25C0</button>
-          <input type="number" class="monster-num-input" data-monster-num="${terrain}" min="0" max="18" inputmode="numeric" value="${num != null ? escapeHtml2(String(num)) : ""}" placeholder="#" aria-label="Numer obszaru ${escapeHtml2(t.label)}" />
-          <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="1" title="Nast\u0119pny obszar">\u25B6</button>
-          <button type="button" class="btn btn-secondary" data-monster-terrain-clear="${terrain}" ${filled ? "" : "disabled"}>Usu\u0144</button>
-        </div>
-        <div class="monster-terrain-levels" role="group" aria-label="Poziom potwora ${escapeHtml2(t.label)}">
-          ${levels.map(
-        (lv) => `<button type="button" class="btn ${filled && level === lv ? "btn-primary" : "btn-secondary"}" data-monster-terrain-level="${terrain}" data-level="${lv}" ${filled ? "" : "disabled"}>Poz. ${lv}</button>`
-      ).join("")}
-        </div>
-        <p class="note monster-terrain-hint">Numery ${opts.map((l) => l.number).join(", ")}</p>
-      </div>`;
-    }).join("");
-    return `
-    <div class="monsters-panel">
-      <h3>${ICO.monster()} Potwory na mapie</h3>
-      <p class="lead" style="margin:0">Trzy \u017Cetony obszar\xF3w = <strong>3 r\xF3\u017Cne tereny</strong>. Podaj <strong>numer</strong> z \u017Cetonu (strza\u0142ki albo wpisz) \u2014 drugi potw\xF3r na ten sam teren jest niemo\u017Cliwy. Szko\u0142a (np. Kaer Seren) jest OK, je\u015Bli tak wysz\u0142o na \u017Cetonie; <strong>Behelt Nar (0)</strong> nie ma \u017Cetonu.</p>
-      ${board.placeError ? `<p class="warn" style="margin:0.45rem 0 0" role="alert">${escapeHtml2(board.placeError)}</p>` : ""}
-      <div class="monster-terrain-grid">${slots}</div>
-      <p class="note" style="margin:0.45rem 0 0">Walka w fazie II jest <strong>opcjonalna</strong> \u2014 tylko gdy \u017Ceton stoi na Twoim polu.</p>
-    </div>
-  `;
-  }
-  function ensurePlayerTrack(p, startCards = 5, startGold = 3) {
-    if (typeof p.reputation !== "number") p.reputation = 0;
-    if (typeof p.cards !== "number") p.cards = startCards;
-    if (typeof p.gold !== "number") p.gold = startGold;
-    if (!p.locationId) p.locationId = null;
-    if (!p.nowDoing) p.nowDoing = "czekam";
-    if (typeof p.elixirs !== "number") p.elixirs = 0;
-    if (!Array.isArray(p.quests)) p.quests = [];
-    if (!p.attrs || typeof p.attrs !== "object") {
-      p.attrs = { attack: 1, defense: 1, alchemy: 1, specialty: 1, level: 1 };
-    }
-    if (typeof p.shield !== "number") p.shield = p.attrs.defense || 1;
-    if (!Array.isArray(p.attrTrophies)) p.attrTrophies = [];
-    if (!p.trails || typeof p.trails !== "object") {
-      p.trails = { forest: null, mountain: null, water: null };
-    }
-    if (typeof p.resourcesApplied !== "boolean") p.resourcesApplied = false;
-    return p;
-  }
-  function handAfterFatigue(cards, rep) {
-    const lose = fatigueForReputation(rep);
-    const after = Math.max(0, cards - lose);
-    return { lose, after, before: cards };
-  }
-  function phase3DrawHint(cardsInHand) {
-    const phase3Target = 3;
-    const hardLimit = 7;
-    const afterDiscardAssume = Math.min(cardsInHand, phase3Target);
-    const need = Math.max(0, phase3Target - afterDiscardAssume);
-    return {
-      limit: hardLimit,
-      phase3Target,
-      drawUpTo: need,
-      afterDraw: phase3Target,
-      note: cardsInHand > phase3Target ? `Masz ${cardsInHand} \u2192 w fazie III zwykle odrzucasz (dowoln\u0105 liczb\u0119), potem dobierasz do 3, potem kupujesz 1 (limit r\u0119ki nadal 7).` : cardsInHand < phase3Target ? `Dobierz do 3: +${need} kart(y), potem kup 1 z puli (limit r\u0119ki 7).` : "Masz 3 \u2014 w fazie III mo\u017Cesz odrzuci\u0107 cz\u0119\u015B\u0107 i dobra\u0107 z powrotem do 3, potem kup 1."
-    };
-  }
-  function escapeXml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
-  function mapSvgHtml(board, roster, {
-    schoolById: schoolById2,
-    highlightFromId,
-    showDisclaimer = false,
-    popupHtml = null,
-    setupCoachPhase = null,
-    setupPreview = false
-  } = {}) {
-    const setupLite = setupPreview || setupCoachPhase != null;
-    const locMap = Object.fromEntries(LOCATIONS.map((l) => [l.id, l]));
-    const fromId = highlightFromId || board.highlightFrom || null;
-    const reachable = new Set(fromId ? neighborsOf(fromId) : []);
-    const roadSeg = ([a, b], cls) => {
-      const A = locMap[a];
-      const B = locMap[b];
-      if (!A || !B) return "";
-      const lit = fromId && (a === fromId && reachable.has(b) || b === fromId && reachable.has(a));
-      return `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="${cls}${lit ? " map-road-lit" : ""}" />`;
-    };
-    const roadsUnder = ROADS.map((pair) => roadSeg(pair, "map-road-under")).join("");
-    const roads = ROADS.map((pair) => roadSeg(pair, "map-road")).join("");
-    const rot = board.rotation || 0;
-    const labelUpright = -rot;
-    const uid = `m${Math.random().toString(36).slice(2, 9)}`;
-    const nodes = LOCATIONS.map((loc) => {
-      const t = TERRAIN[loc.terrain] || TERRAIN.forest;
-      const fill = t.color;
-      const selected = board.selectedLoc === loc.id ? " map-node-selected" : "";
-      const here = fromId === loc.id ? " map-node-here" : "";
-      const reach = reachable.has(loc.id) ? " map-node-reach" : "";
-      const terrainClass = ` map-node--${loc.terrain || "forest"}`;
-      const monsters = board.monsters[loc.id];
-      const witches = roster.map((p, i) => ({ p, i })).filter(({ p }) => p.locationId === loc.id);
-      const numLabel = typeof loc.number === "number" ? String(loc.number) : "";
-      const name = String(loc.name || "");
-      const nameLen = name.length;
-      const fontPx = nameLen >= 12 ? 1.55 : nameLen >= 9 ? 1.75 : 1.95;
-      const sidePad = 2.4;
-      const labelW = Math.min(30, Math.max(9.5, nameLen * fontPx * 0.62 + sidePad * 2));
-      const labelH = 2.85;
-      const labelX = -labelW / 2;
-      const labelY = -labelH / 2;
-      const clipId = `${uid}-lbl-${loc.id}`;
-      const clipPad = 0.55;
-      const isWild = loc.terrain === "wild" || loc.id === "behelt-nar";
-      const monsterBadge = monsters ? `<g class="map-monster-badge" transform="translate(${loc.x + 3.4},${loc.y - 4}) rotate(${labelUpright})">
-           <circle r="2.15" fill="#6b3a2f" stroke="#f0e6d2" stroke-width="0.35"/>
-           <text y="0.85" text-anchor="middle" class="map-badge-text">${escapeXml(String(monsters.count || 1))}</text>
-         </g>` : "";
-      const witchBadges = setupLite || loc.school ? "" : witches.map(({ i }, idx) => {
-        const ox = -3.2 + idx * 2.4;
-        return `<g transform="translate(${loc.x + ox},${loc.y + 4.4}) rotate(${labelUpright})">
-          <circle r="1.7" fill="#244833" stroke="#d4b05a" stroke-width="0.35"/>
-          <text y="0.7" text-anchor="middle" class="map-badge-text">${i + 1}</text>
-        </g>`;
-      }).join("");
-      const disc = isWild ? `<circle class="map-node-soft" cx="${loc.x}" cy="${loc.y}" r="4.4" fill="#7a6b4a" opacity="0.2"/>
-        <image class="map-node-wild" href="./img/terrain/wild.png" x="${loc.x - 3.55}" y="${loc.y - 3.55}" width="7.1" height="7.1" preserveAspectRatio="xMidYMid slice"/>
-        <circle class="map-node-disc" cx="${loc.x}" cy="${loc.y}" r="3.55" fill="none" stroke="#f4ebd6" stroke-width="0.55"/>` : `<circle class="map-node-soft" cx="${loc.x}" cy="${loc.y}" r="4.4" fill="${fill}" opacity="0.18"/>
-        <circle class="map-node-disc" cx="${loc.x}" cy="${loc.y}" r="3.55" fill="${fill}" stroke="#f4ebd6" stroke-width="0.55"/>
-        <circle cx="${loc.x}" cy="${loc.y}" r="2.55" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="0.4"/>`;
-      return `
-      <g class="map-node${terrainClass}${selected}${here}${reach}" data-loc="${loc.id}" style="cursor:pointer">
-        ${reach ? `<circle cx="${loc.x}" cy="${loc.y}" r="5" fill="none" stroke="#b8923e" stroke-width="0.5" stroke-dasharray="1.1 0.7" opacity="0.95"/>` : ""}
-        ${disc}
-        <text x="${loc.x}" y="${loc.y + 1.1}" text-anchor="middle" class="map-num">${escapeXml(numLabel)}</text>
-        <g class="map-label-g" transform="translate(${loc.x}, ${loc.y - 5.2}) rotate(${labelUpright})">
-          <clipPath id="${clipId}"><rect x="${labelX + clipPad}" y="${labelY}" width="${labelW - clipPad * 2}" height="${labelH}" rx="0.25"/></clipPath>
-          <rect class="map-label-bg" x="${labelX}" y="${labelY}" width="${labelW}" height="${labelH}" rx="0.35"/>
-          <text y="0" text-anchor="middle" dominant-baseline="central" class="map-label" style="font-size:${fontPx}px" clip-path="url(#${clipId})">${escapeXml(name)}</text>
-        </g>
-        ${monsterBadge}
-        ${witchBadges}
-      </g>`;
-    }).join("");
-    return `
-    <div class="map-stage${popupHtml ? " map-stage--has-popup" : ""}">
-      <div class="map-wrap" style="--map-rot:${rot}deg">
-        <svg class="map-svg" viewBox="-13 -12.5 ${MAP_FLAG.viewW + 13} 105.5" role="img" aria-label="Mapa obszar\xF3w">
-          <defs>
-            <linearGradient id="${uid}-land" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#8fa57a"/>
-              <stop offset="38%" stop-color="#c2b48a"/>
-              <stop offset="72%" stop-color="#9aaf7e"/>
-              <stop offset="100%" stop-color="#7e9470"/>
-            </linearGradient>
-            <radialGradient id="${uid}-mist" cx="50%" cy="42%" r="62%">
-              <stop offset="0%" stop-color="rgba(255,248,230,0.28)"/>
-              <stop offset="100%" stop-color="rgba(70,90,55,0.12)"/>
-            </radialGradient>
-            <radialGradient id="${uid}-water" cx="12%" cy="18%" r="28%">
-              <stop offset="0%" stop-color="rgba(70,120,150,0.28)"/>
-              <stop offset="100%" stop-color="rgba(70,120,150,0)"/>
-            </radialGradient>
-            <radialGradient id="${uid}-peak" cx="88%" cy="14%" r="24%">
-              <stop offset="0%" stop-color="rgba(210,215,220,0.35)"/>
-              <stop offset="100%" stop-color="rgba(210,215,220,0)"/>
-            </radialGradient>
-            <linearGradient id="${uid}-wood" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#6b4a2e"/>
-              <stop offset="35%" stop-color="#8a623c"/>
-              <stop offset="70%" stop-color="#734f30"/>
-              <stop offset="100%" stop-color="#5c3f28"/>
-            </linearGradient>
-            <linearGradient id="${uid}-wood-shine" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="rgba(255,230,190,0.14)"/>
-              <stop offset="45%" stop-color="rgba(255,230,190,0)"/>
-              <stop offset="100%" stop-color="rgba(30,18,8,0.18)"/>
-            </linearGradient>
-            <clipPath id="${uid}-shell">
-              <path d="${boardShellPath()}"/>
-            </clipPath>
-          </defs>
-          <g class="map-board-united" clip-path="url(#${uid}-shell)">
-            <g class="map-land">
-              <rect class="map-board-face" x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-land)"/>
-              <rect x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-mist)"/>
-              <ellipse cx="14" cy="16" rx="22" ry="16" fill="url(#${uid}-water)"/>
-              <ellipse cx="86" cy="14" rx="18" ry="14" fill="url(#${uid}-peak)"/>
-              <ellipse cx="78" cy="70" rx="20" ry="14" fill="url(#${uid}-peak)" opacity="0.7"/>
-              <g class="map-roads-under">${roadsUnder}</g>
-              <g class="map-roads">${roads}</g>
-              <g class="map-nodes">${nodes}</g>
-              ${setupLite ? "" : reputationTrackSvg(roster, board)}
-            </g>
-            ${woodCardPanelSvg(uid)}
-            ${woodCardSlotsSvg()}
-            ${roundFlagSvg(board)}
-            ${setupCoachPhase != null && setupCoachPhase >= 6 ? monsterLevelStacksSvg() : ""}
-            ${setupCoachPhase != null && setupCoachPhase >= 7 ? locationTokensAndFightDeckSvg() : ""}
-          </g>
-          ${setupCoachPhase != null && setupCoachPhase >= 8 ? goldBankAndDiceSvg() : ""}
-          <path class="map-board-outline" d="${boardShellPath()}" fill="none" stroke="#5a4530" stroke-width="0.55"/>
-        </svg>
-      </div>
-      ${popupHtml ? `<div class="map-loc-popup" id="map-loc-popup" role="dialog" aria-live="polite">${popupHtml}</div>` : ""}
-    </div>
-    ${showDisclaimer ? `<p class="note">Schemat: numery 0\u201318, tereny i drogi.</p>` : ""}
-  `;
-  }
-  var MAP_FLAG = {
-    yTop: 0.6,
-    w: 3.35,
-    h: 5.8,
-    notch: 0.85,
-    edgePad: 4.4,
-    woodX: 100,
-    woodW: 58.5,
-    get viewW() {
-      return this.woodX + this.woodW + 0.6;
-    },
-    get shellW() {
-      return this.woodX + this.woodW - 0.6;
-    }
-  };
-  function woodCardLayout() {
-    const { yTop, w: flagW, h: flagH, edgePad, woodX, woodW } = MAP_FLAG;
-    const tokenR = 2.2;
-    const colGap = 4.2;
-    const rightPad = 1.25;
-    const woodRight = woodX + woodW;
-    const leftSlotX = woodX + edgePad + flagW;
-    const slotW = (woodRight - rightPad - leftSlotX - colGap) / 2;
-    const leftSlotW = slotW;
-    const rightSlotX = leftSlotX + leftSlotW + colGap;
-    const rightSlotW = slotW;
-    const woodBottom = yTop + 83.8;
-    const rightTopStart = yTop + flagH - 1.15;
-    const bottomPad = edgePad;
-    const slotGap = 1.55;
-    const firstBreak = 3.4;
-    const rightCount = 7;
-    const rightAvail = woodBottom - bottomPad - rightTopStart;
-    const slotH = (rightAvail - firstBreak - (rightCount - 2) * slotGap) / rightCount;
-    return {
-      yTop,
-      flagW,
-      flagH,
-      edgePad,
-      woodX,
-      woodW,
-      woodRight,
-      tokenR,
-      rightPad,
-      leftSlotX,
-      leftSlotW,
-      rightSlotX,
-      rightSlotW,
-      slotX: leftSlotX,
-      slotW: leftSlotW,
-      slotH,
-      slotGap,
-      firstBreak,
-      rightTopStart,
-      woodBottom,
-      bottomPad,
-      rightCount
-    };
-  }
-  function bottomNotches() {
-    const { leftSlotX: lx, leftSlotW: lw, rightSlotX: rx, rightSlotW: rw } = woodCardLayout();
-    const depth = 1.45;
-    const angleDeg = 70;
-    const sideInset = depth / Math.tan(angleDeg * Math.PI / 180);
-    const make = (x, w) => ({
-      x0: x,
-      /* lewy dół */
-      x1: x + w,
-      /* prawy dół — szerokość karty */
-      xt0: x + sideInset,
-      /* lewy góra */
-      xt1: x + w - sideInset,
-      /* prawy góra */
-      d: depth
-    });
-    return [make(lx, lw), make(rx, rw)];
-  }
-  function notchPathSeg(n, y1) {
-    return [
-      `H${n.x1}`,
-      `L${n.xt1} ${y1 - n.d}`,
-      `H${n.xt0}`,
-      `L${n.x0} ${y1}`
-    ].join(" ");
-  }
-  function boardShellPath() {
-    const x0 = 0.6;
-    const y0 = 0.6;
-    const x1 = x0 + MAP_FLAG.shellW;
-    const y1 = y0 + 83.8;
-    const [nL, nR] = bottomNotches();
-    return [`M${x0} ${y0}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x0}`, `Z`].join(
-      " "
-    );
-  }
-  function woodFacePath() {
-    const { woodX: x, yTop: y, woodW: w } = woodCardLayout();
-    const y1 = y + 83.8;
-    const x1 = x + w;
-    const [nL, nR] = bottomNotches();
-    return [`M${x} ${y}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x}`, `Z`].join(" ");
-  }
-  function woodCardPanelSvg(uid = "m") {
-    const { woodX: x, woodW: w, yTop: y } = woodCardLayout();
-    const h = 83.8;
-    const face = woodFacePath();
-    const notchD = bottomNotches()[0].d;
-    const plankH = h / 9;
-    const seams = Array.from({ length: 8 }, (_, i) => {
-      const yy = y + plankH * (i + 1);
-      if (yy > y + h - notchD - 0.3) return "";
-      return `<line class="map-wood-seam" x1="${x}" y1="${yy}" x2="${x + w}" y2="${yy}"/>`;
-    }).join("");
-    const grains = [0.12, 0.28, 0.47, 0.63].map(
-      (t, i) => `<path class="map-wood-grain" d="M${x + 1.2 + i * 0.15} ${y + h * t} Q${x + w * 0.45} ${y + h * t - 1.2}, ${x + w - 1.4} ${y + h * t + 0.6}" fill="none"/>`
-    ).join("");
-    return `
-    <g class="map-wood-panel" aria-label="St\xF3\u0142 na karty">
-      <path class="map-wood-face" d="${face}" fill="url(#${uid}-wood)"/>
-      <path d="${face}" fill="url(#${uid}-wood-shine)"/>
-      ${seams}
-      ${grains}
-      <line class="map-wood-join" x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/>
-    </g>`;
-  }
-  function woodCardSlotsSvg() {
-    const {
-      yTop,
-      flagH,
-      tokenR,
-      leftSlotX,
-      leftSlotW,
-      rightSlotX,
-      rightSlotW,
-      slotH,
-      slotGap,
-      firstBreak,
-      rightTopStart,
-      woodBottom,
-      bottomPad,
-      rightCount
-    } = woodCardLayout();
-    const topStart = yTop + flagH + 1.4;
-    const leftBottomH = 3 * slotH + 2 * slotGap;
-    const leftBottomStart = woodBottom - bottomPad - leftBottomH;
-    const diamondHtml = (x, y, w, h) => {
-      const cx = x + w / 2;
-      const cy = y + h / 2;
-      const rw = Math.min(w * 0.22, h * 0.55);
-      const rh = Math.min(h * 0.38, w * 0.16);
-      return `<path class="map-card-diamond" d="M${cx} ${cy - rh} L${cx + rw} ${cy} L${cx} ${cy + rh} L${cx - rw} ${cy} Z"/>`;
-    };
-    const CARD_TOKEN_TERRAINS = ["forest", "water", "mountain"];
-    const slotHtml = (i, x, y, w, h, withToken, withDiamond = false, terrain = null) => {
-      const token = withToken ? `<g class="map-token-slot" data-slot="card-token-${i}" data-terrain="${terrain || ""}" aria-label="\u017Beton obszaru \u2014 ${terrain === "forest" ? "Las" : terrain === "water" ? "Woda" : terrain === "mountain" ? "G\xF3ry" : "\u017Beton"}">
-          <circle class="map-token-slot-well" cx="${x + w}" cy="${y + h / 2}" r="${tokenR}"/>
-          <circle class="map-token-slot-lip" cx="${x + w}" cy="${y + h / 2}" r="${tokenR - 0.45}"/>
-        </g>` : "";
-      return `
-      <g class="map-card-slot" data-slot="${i}"${terrain ? ` data-terrain="${terrain}"` : ""}>
-        <rect class="map-card-slot-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.5"/>
-        <rect class="map-card-slot-lip" x="${x + 0.35}" y="${y + 0.35}" width="${w - 0.7}" height="${h - 0.7}" rx="0.3"/>
-        ${withDiamond ? diamondHtml(x, y, w, h) : ""}
-        ${token}
-      </g>`;
-    };
-    const slots = [];
-    for (let i = 0; i < 3; i++) {
-      slots.push(
-        slotHtml(
-          i,
-          leftSlotX,
-          topStart + i * (slotH + slotGap),
-          leftSlotW,
-          slotH,
-          true,
-          false,
-          CARD_TOKEN_TERRAINS[i]
-        )
-      );
-    }
-    for (let i = 0; i < 3; i++) {
-      slots.push(
-        slotHtml(3 + i, leftSlotX, leftBottomStart + i * (slotH + slotGap), leftSlotW, slotH, false)
-      );
-    }
-    let rightY = rightTopStart;
-    for (let i = 0; i < rightCount; i++) {
-      slots.push(slotHtml(6 + i, rightSlotX, rightY, rightSlotW, slotH, false, i === 0));
-      if (i < rightCount - 1) rightY += slotH + (i === 0 ? firstBreak : slotGap);
-    }
-    const [nL, nR] = bottomNotches();
-    const notchSlot = (id, label, notch, extraClass) => {
-      const w = notch.x1 - notch.x0;
-      const h = Math.max(slotH * 0.72, notch.d * 4.2);
-      const x = notch.x0;
-      const y = woodBottom - notch.d;
-      return `
-      <g class="map-card-slot ${extraClass}" data-slot="${id}" aria-label="${label}">
-        <rect class="map-card-slot-well ${extraClass}-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.45"/>
-        <rect class="map-card-slot-lip" x="${x + 0.3}" y="${y + 0.3}" width="${w - 0.6}" height="${h - 0.6}" rx="0.3"/>
-      </g>`;
-    };
-    slots.push(notchSlot("elixir", "Talia eliksir\xF3w", nR, "map-elixir-slot"));
-    slots.push(notchSlot("trophy", "Trofea atrybut\xF3w", nL, "map-trophy-slot"));
-    return `<g class="map-card-slots" aria-label="Pola na karty">${slots.join("")}</g>`;
-  }
-  function roundFlagSvg(board = null) {
-    const active = String(board?.roundFlag || board?.pendingMonsterLevel || "I").toUpperCase();
-    const activeRoman = active === "III" || active === "3" ? "III" : active === "II" || active === "2" ? "II" : "I";
-    const flags = monsterFlagLayout();
-    const { yTop, w, h, notch } = MAP_FLAG;
-    const cloth = (roman, x) => `
-    <g class="map-round-flag${roman === activeRoman ? " map-round-flag--active" : ""}" transform="translate(${x}, ${yTop})" aria-label="Poziom ${roman}">
-      <path class="map-round-flag-cloth" d="M0,0 L${w},0 L${w},${h - notch} L${w / 2},${h} L0,${h - notch} Z"/>
-      <text class="map-round-flag-num" x="${w / 2}" y="${h * 0.52}" text-anchor="middle" dominant-baseline="middle">${roman}</text>
-    </g>`;
-    return `<g class="map-round-flags">${flags.map((f) => cloth(f.roman, f.x)).join("")}</g>`;
-  }
-  function monsterFlagLayout() {
-    const { edgePad, woodX, w: flagW } = MAP_FLAG;
-    const { slotX, slotW } = woodCardLayout();
-    return [
-      { roman: "I", level: 1, x: edgePad },
-      { roman: "II", level: 2, x: woodX + edgePad },
-      { roman: "III", level: 3, x: slotX + slotW }
-    ].map((f) => ({ ...f, cx: f.x + flagW / 2 }));
-  }
-  function hexagonPath(cx, cy, r) {
-    const pts = [];
-    for (let i = 0; i < 6; i++) {
-      const a = Math.PI / 180 * (60 * i - 30);
-      pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
-    }
-    return `M${pts.join(" L")} Z`;
-  }
-  function monsterLevelStacksSvg() {
-    const { yTop, w: flagW } = MAP_FLAG;
-    const { slotH } = woodCardLayout();
-    const cardW = Math.max(flagW * 1.85, 5.8);
-    const cardH = Math.max(slotH * 1.05, 7.2);
-    const tokenR = { 1: 2.05, 2: 2.55, 3: 3.15 };
-    const stacks = monsterFlagLayout().map((f) => {
-      const cardX = f.cx - cardW / 2;
-      const cardY = yTop - cardH - 0.35;
-      const tokenCx = f.cx + cardW / 2 + tokenR[f.level] + 0.85;
-      const tokenCy = cardY + cardH * 0.55;
-      return `
-      <g class="map-monster-stack" data-monster-level="${f.level}" data-slot="monster-${f.level}" aria-label="Potwory ${f.roman}">
-        <g class="map-card-slot map-monster-card-slot" data-slot="monster-card-${f.level}">
-          <rect class="map-card-slot-well map-monster-card-well" x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="0.45"/>
-          <rect class="map-card-slot-lip" x="${cardX + 0.28}" y="${cardY + 0.28}" width="${cardW - 0.56}" height="${cardH - 0.56}" rx="0.3"/>
-          <text class="map-monster-card-lvl" x="${f.cx}" y="${cardY + cardH * 0.52}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
-        </g>
-        <g class="map-monster-token" data-slot="monster-token-${f.level}" data-token-level="${f.level}">
-          <path class="map-monster-token-well" d="${hexagonPath(tokenCx, tokenCy, tokenR[f.level])}"/>
-          <text class="map-monster-token-num" x="${tokenCx}" y="${tokenCy + 0.15}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
-        </g>
-      </g>`;
-    });
-    return `<g class="map-monster-stacks" aria-label="Stosy potwor\xF3w I\u2013III">${stacks.join("")}</g>`;
-  }
-  function locationTokensAndFightDeckSvg() {
-    const { yTop, woodX } = MAP_FLAG;
-    const fightW = 7.6;
-    const fightH = 10.6;
-    const mapGap = 0.2;
-    const rightPad = 0.35;
-    const fightX = woodX - fightW - rightPad;
-    const fightY = yTop - fightH - mapGap;
-    const r = 3.15;
-    const img = 4.5;
-    const tokenGap = 7.05;
-    const tokenRight = fightX - 0.85 - r;
-    const terrains = [
-      { id: "forest", label: "Las", file: "forest" },
-      { id: "mountain", label: "G\xF3ry", file: "mountain" },
-      { id: "water", label: "Woda", file: "water" }
-    ].map((t, i, arr) => ({
-      ...t,
-      x: tokenRight - (arr.length - 1 - i) * tokenGap
-    }));
-    const cy = yTop - r - mapGap;
-    const tokens = terrains.map(
-      (t) => `
-      <g class="map-loc-token-stack" data-slot="loc-token-${t.id}" data-terrain="${t.id}" aria-label="\u017Betony obszar\xF3w \u2014 ${t.label}">
-        <circle class="map-loc-token-well" cx="${t.x}" cy="${cy}" r="${r}" fill="none"/>
-        <image href="./img/terrain/${t.file}.png" x="${t.x - img / 2}" y="${cy - img / 2}" width="${img}" height="${img}" preserveAspectRatio="xMidYMid meet"/>
-      </g>`
-    ).join("");
-    const fight = `
-    <g class="map-card-slot map-fight-deck-slot" data-slot="monster-fight" aria-label="Talia walki potwor\xF3w">
-      <rect class="map-card-slot-well map-fight-deck-well" x="${fightX}" y="${fightY}" width="${fightW}" height="${fightH}" rx="0.5"/>
-      <rect class="map-card-slot-lip" x="${fightX + 0.3}" y="${fightY + 0.3}" width="${fightW - 0.6}" height="${fightH - 0.6}" rx="0.35"/>
-      <text class="map-fight-deck-label" x="${fightX + fightW / 2}" y="${fightY + fightH * 0.52}" text-anchor="middle" dominant-baseline="middle">\u2694</text>
-    </g>`;
-    return `<g class="map-loc-fight-setup" aria-label="\u017Betony obszar\xF3w i talia walki">${tokens}${fight}</g>`;
-  }
-  function goldBankAndDiceSvg() {
-    const { yTop } = woodCardLayout();
-    const cx = -6.2;
-    const dieSize = 2.85;
-    const dieGap = 0.38;
-    const step = dieSize + dieGap;
-    const diceY0 = yTop + 1.15;
-    const diceCells = [
-      [-1, 0],
-      [0, 0],
-      [1, 0],
-      [-0.5, 1],
-      [0.5, 1]
-    ];
-    const pip = (x, y) => `<circle class="map-die-pip" cx="${x}" cy="${y}" r="0.26"/>`;
-    const pipLayouts = [
-      [[0.5, 0.5]],
-      [
-        [0.28, 0.28],
-        [0.72, 0.72]
-      ],
-      [
-        [0.28, 0.28],
-        [0.5, 0.5],
-        [0.72, 0.72]
-      ],
-      [
-        [0.28, 0.28],
-        [0.72, 0.28],
-        [0.28, 0.72],
-        [0.72, 0.72]
-      ],
-      [
-        [0.28, 0.28],
-        [0.72, 0.28],
-        [0.5, 0.5],
-        [0.28, 0.72],
-        [0.72, 0.72]
-      ]
-    ];
-    const dice = diceCells.map(([gx, gy], i) => {
-      const x = cx + gx * step - dieSize / 2;
-      const y = diceY0 + gy * step;
-      const pips = pipLayouts[i].map(([px, py]) => pip(x + dieSize * px, y + dieSize * py)).join("");
-      return `
-      <g class="map-die-slot" data-slot="die-${i}" data-die="${i}">
-        <rect class="map-die-well" x="${x}" y="${y}" width="${dieSize}" height="${dieSize}" rx="0.45"/>
-        ${pips}
-      </g>`;
-    }).join("");
-    const goldR = 2.05;
-    const goldCy = diceY0 + 2 * step + goldR + 1.35;
-    const goldOffsets = [
-      [-1.55, -0.55],
-      [1.35, -0.75],
-      [-0.15, 0.95],
-      [1.65, 0.85],
-      [-1.7, 1.15]
-    ];
-    const golds = goldOffsets.map(
-      ([dx, dy], i) => `
-      <g class="map-gold-coin" data-gold="${i}" transform="translate(${cx + dx}, ${goldCy + dy})">
-        <circle class="map-gold-coin-outer" r="${goldR}"/>
-        <circle class="map-gold-coin-inner" r="${goldR * 0.58}"/>
-        <text class="map-gold-coin-mark" text-anchor="middle" dominant-baseline="middle">z\u0142</text>
-      </g>`
-    ).join("");
-    return `
-    <g class="map-gold-dice-setup" aria-label="Bank z\u0142ota i ko\u015Bci">
-      <g class="map-dice-tray" data-slot="dice-tray" aria-label="Ko\u015Bci do gry">${dice}</g>
-      <g class="map-gold-bank" data-slot="gold-bank" aria-label="Bank z\u0142ota">${golds}</g>
-    </g>`;
-  }
-  var SCHOOL_REP_COLOR = {
-    wilk: "#3a2210",
-    gryf: "#6e5410",
-    niedzwiedz: "#541010",
-    kot: "#142448",
-    zmija: "#14341c",
-    mantikora: "#5c2c0c"
-  };
-  function schoolRepFill(schoolId) {
-    return SCHOOL_REP_COLOR[schoolId] || SCHOOL_REP_COLOR.wilk;
-  }
-  function reputationTrackSvg(roster = [], board = null) {
-    const cy0 = 80.6;
-    const edgePad = 85 - cy0;
-    const cx = edgePad;
-    const gap = 5.05;
-    if (board) ensureReputationClaims(board, roster);
-    const claims = Array.isArray(board?.repClaim) ? board.repClaim : [null, null, null, null, null];
-    const byRep = { 0: [], 1: [], 2: [], 3: [], 4: [] };
-    (roster || []).forEach((p, i) => {
-      if (!p) return;
-      const r = Math.min(4, Math.max(0, Math.round(Number(p.reputation) || 0)));
-      byRep[r].push({ i, schoolId: p.schoolId || "wilk" });
-    });
-    const slots = [0, 1, 2, 3, 4].map((n) => {
-      const cy = cy0 - n * gap;
-      const present = byRep[n];
-      let leadSchool = claims[n] || null;
-      const leadPlayer = present.find((p) => p.schoolId === leadSchool) || present[0] || null;
-      if (leadPlayer) leadSchool = leadPlayer.schoolId;
-      const others = leadPlayer ? present.filter((p) => p.i !== leadPlayer.i) : present;
-      const lead = leadSchool ? `<circle class="map-rep-lead map-rep-pawn-disc" cx="${cx}" cy="${cy}" r="1.9" fill="${schoolRepFill(leadSchool)}"/>` : "";
-      const othersHtml = others.map(({ i, schoolId }, idx) => {
-        const ox = 3.55 + idx * 2.85;
-        const oy = -idx * 0.55;
-        return `
-        <g class="map-rep-other" style="--i:${idx}" transform="translate(${cx + ox}, ${cy + oy})" data-player="${i}">
-          <circle class="map-rep-pawn-disc" r="1.35" fill="${schoolRepFill(schoolId)}" cx="0" cy="0"/>
-        </g>`;
-      }).join("");
-      const hasMore = others.length > 0;
-      return `
-      <g class="map-rep-slot${leadSchool ? " map-rep-slot--claimed" : ""}${hasMore ? " map-rep-slot--has-more" : ""}" data-rep="${n}">
-        <circle class="map-rep-hit" cx="${cx}" cy="${cy}" r="3.1"/>
-        <circle class="map-rep-ring" cx="${cx}" cy="${cy}" r="2.35"/>
-        <text x="${cx}" y="${cy + 0.9}" text-anchor="middle" class="map-rep-num">${n}</text>
-        ${lead}
-        <g class="map-rep-others">${othersHtml}</g>
-      </g>`;
-    }).join("");
-    return `
-    <g class="map-rep-track" aria-label="Reputacja graczy 0\u20134">
-      ${slots}
-    </g>`;
-  }
-  var _mapPopupCleanup = null;
-  function bindMapLocPopup(root, { timeoutMs = 3e3 } = {}) {
-    if (typeof _mapPopupCleanup === "function") {
-      _mapPopupCleanup();
-      _mapPopupCleanup = null;
-    }
-    const popup = root?.querySelector?.("#map-loc-popup");
-    if (!popup) return () => {
-    };
-    let gone = false;
-    let outsideTimer = null;
-    const hide = () => {
-      if (gone) return;
-      gone = true;
-      popup.classList.add("map-loc-popup--gone");
-      window.clearTimeout(timer);
-      if (outsideTimer) window.clearTimeout(outsideTimer);
-      document.removeEventListener("pointerdown", onOutside, true);
-      if (_mapPopupCleanup === hide) _mapPopupCleanup = null;
-    };
-    const onOutside = (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      if (popup.contains(t)) return;
-      if (t.closest(".map-node-reach")) return;
-      hide();
-    };
-    const timer = window.setTimeout(hide, timeoutMs);
-    outsideTimer = window.setTimeout(() => {
-      if (!gone) document.addEventListener("pointerdown", onOutside, true);
-    }, 0);
-    _mapPopupCleanup = hide;
-    return hide;
-  }
-  function mapToolbarHtml() {
-    return "";
-  }
-  function escapeHtml2(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function terrainIcon(id) {
-    if (id === "forest") return ICO.forest();
-    if (id === "mountain") return ICO.mountain();
-    if (id === "water") return ICO.water();
-    return "";
-  }
-  function selectedLocPanel(board, roster) {
-    const loc = locById(board.selectedLoc);
-    if (!loc) {
-      return `<p class="lead">Kliknij lokacj\u0119 na mapie. Potwory ustawiasz numerami w panelu (1 na teren).</p>`;
-    }
-    const t = TERRAIN[loc.terrain];
-    const m = monsterAt(board, loc.id);
-    const here = roster.map((p, i) => ({ p, i })).filter(({ p }) => p.locationId === loc.id);
-    const hint = actionHintFor(loc);
-    const neigh = neighborsOf(loc.id).map((id) => locById(id)).filter(Boolean).map((n) => `${n.name}${typeof n.number === "number" ? ` (${n.number})` : ""}`).join(", ");
-    const otherSame = !m && MONSTER_TERRAINS.includes(loc.terrain) ? monsterOccupyingTerrain(board, loc.terrain) : null;
-    return `
-    <div class="loc-panel">
-      <h3>${escapeHtml2(loc.name)}${typeof loc.number === "number" ? ` <span class="loc-num">#${loc.number}</span>` : ""}</h3>
-      <p class="lead" style="margin:0">${terrainIcon(loc.terrain)} Teren ruchu: <strong>${t.label}</strong>${loc.school ? ` \xB7 szko\u0142a wied\u017Ami\u0144ska` : ""}</p>
-      ${loc.actionKey ? `<div class="loc-action-icon">${actionIconHtml(loc.actionKey, { width: 130, height: 40 })}</div>` : ""}
-      ${hint ? `<p class="loc-action"><strong>Znak na planszy:</strong> ${escapeHtml2(hint)}</p>` : ""}
-      <p class="note" style="margin:0.4rem 0 0">S\u0105siedzi (\u015Bcie\u017Cki): ${neigh ? escapeHtml2(neigh) : "\u2014"}</p>
-      <p class="tip" style="margin:0.5rem 0 0">Po ruchu helper poka\u017Ce kroki tej akcji (faza I, opcjonalna).</p>
-      ${m ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.monster()} Potw\xF3r tu: poz. <strong>${escapeHtml2(
-      String(m.level || "?")
-    )}</strong></p>` : otherSame ? `<p class="note" style="margin:0.45rem 0 0">${ICO.monster()} Slot \u201E${escapeHtml2(
-      t.label
-    )}\u201D zaj\u0119ty przez <strong>${escapeHtml2(otherSame.loc.name)}</strong> (#${otherSame.loc.number}).</p>` : `<p class="note" style="margin:0.45rem 0 0">${ICO.monster()} Brak potwora na tym polu \u2014 ustaw numer w panelu poni\u017Cej.</p>`}
-      <p>Wied\u017Amini:
-        ${here.length ? here.map(
-      ({ p, i }) => `<span class="player-chip">${i + 1}. ${escapeHtml2(p.name)}</span>`
-    ).join(" ") : "\u2014"}
-      </p>
-    </div>
-  `;
-  }
-  function movePromptHtml(board, roster) {
-    const mp = board.movePrompt;
-    if (!mp) return "";
-    const p = roster[mp.playerIdx];
-    if (!p) return "";
-    return moveCostChooserHtml({
-      fromLoc: locById(mp.fromId),
-      toLoc: locById(mp.toId),
-      playerName: p.name,
-      selectedCostId: mp.costId || null
-    });
-  }
-  function playerTrackerHtml(roster, { schoolById: schoolById2, activeIndex, START_RESOURCES: START_RESOURCES2, players, isSolo: isSolo2 }) {
-    return roster.map((p, i) => {
-      const school = schoolById2(p.schoolId);
-      const iconFn = SCHOOL_ICON[p.schoolId] || ICO.specialty;
-      const loc = p.locationId ? locById(p.locationId) : null;
-      const fat = fatigueForReputation(Math.min(4, (p.reputation || 0) + 1));
-      const nextRep = Math.min(4, (p.reputation || 0) + 1);
-      const afterFat = handAfterFatigue(p.cards || 0, nextRep);
-      const draw = phase3DrawHint(p.cards || 0);
-      const start = START_RESOURCES2[players]?.[i] || { cards: 5, gold: 3 };
-      const guide = nowDoingGuideHtml(p, { isSolo: !!isSolo2 });
-      return `
-        <article class="tracker-card ${i === activeIndex ? "tracker-active" : ""}" data-track="${i}">
-          <header>
-            <span class="player-chip">${iconFn()}${escapeHtml2(p.name)} <span>${school.short}</span></span>
-            ${i === activeIndex ? `<span class="badge">Teraz gra</span>` : ""}
-          </header>
-
-          <div class="tracker-grid">
-            <label>Reputacja (0\u20134)
-              <div class="rep-row">
-                ${[0, 1, 2, 3, 4].map(
-        (n) => `<button type="button" class="rep-btn ${(p.reputation || 0) === n ? "active" : ""}" data-rep="${n}" data-idx="${i}">${n}</button>`
-      ).join("")}
-              </div>
-            </label>
-
-            <label>Karty na r\u0119ce
-              <div class="num-row num-row--cards">
-                <button type="button" class="btn btn-secondary" data-cards-delta="-1" data-idx="${i}">\u2212</button>
-                <span class="num-val num-val--cards">${actionCardsHtml(p.cards ?? start.cards, { height: 22 })}</span>
-                <button type="button" class="btn btn-secondary" data-cards-delta="1" data-idx="${i}">+</button>
-              </div>
-            </label>
-
-            <label>Z\u0142oto
-              <div class="num-row num-row--gold">
-                <button type="button" class="btn btn-secondary" data-gold-delta="-1" data-idx="${i}">\u2212</button>
-                <span class="num-val num-val--coins">${goldCoinsHtml(p.gold ?? start.gold, { size: 24 })}</span>
-                <button type="button" class="btn btn-secondary" data-gold-delta="1" data-idx="${i}">+</button>
-              </div>
-            </label>
-
-            <label>Eliksiry (max 4)
-              <div class="num-row">
-                <button type="button" class="btn btn-secondary" data-elixir-delta="-1" data-idx="${i}">\u2212</button>
-                <strong class="num-val">${p.elixirs ?? 0}</strong>
-                <button type="button" class="btn btn-secondary" data-elixir-delta="1" data-idx="${i}">+</button>
-              </div>
-            </label>
-          </div>
-
-          <p class="tip"><strong>Lokalizacja:</strong> ${loc ? escapeHtml2(loc.name) : "szko\u0142a startowa (ustawi si\u0119 po wyborze szko\u0142y)"}</p>
-
-          ${(p.quests || []).length ? `<div class="tracker-quests">
-                  <p class="step-kicker" style="margin:0.35rem 0 0.25rem">${ICO.quest()} Zadania (${p.quests.length})</p>
-                  <ul class="checklist">
-                    ${p.quests.map((q) => {
-        const ql = q.locationId ? locById(q.locationId) : null;
-        return `<li>
-                          <strong>${escapeHtml2(q.title || "Zadanie")}</strong>
-                          \u2192 ${ql ? escapeHtml2(ql.name) : "?"}
-                          ${q.eventCard ? ` \xB7 Event <strong>#${escapeHtml2(String(q.eventCard))}</strong>` : ""}
-                          <button type="button" class="btn btn-secondary" data-quest-done="${escapeHtml2(q.id)}" data-idx="${i}">Usu\u0144</button>
-                        </li>`;
-      }).join("")}
-                  </ul>
-                </div>` : ""}
-
-          <div class="now-row">
-            <span class="step-kicker" style="margin:0">Co robi teraz</span>
-            <div class="choice-grid now-actions">
-              ${NOW_ACTIONS.map(
-        (a) => `
-                <button type="button" class="choice ${(p.nowDoing || "czekam") === a.id ? "active" : ""}" data-now="${a.id}" data-idx="${i}">
-                  <strong>${a.label}</strong>
-                </button>`
-      ).join("")}
-            </div>
-          </div>
-
-          ${guide}
-
-          <details class="tracker-math">
-            <summary><strong>Ile kart: traci / zostaje / dobiera</strong></summary>
-            <ul class="checklist">
-              <li><strong>Teraz na r\u0119ce:</strong> ${p.cards ?? 0} (sufit 7; w fazie III cel doboru = <strong>3</strong>)</li>
-              <li><strong>Przy +1 reputacji (\u2192 ${nextRep}):</strong> zm\u0119czenie usuwa z gry <strong>${afterFat.lose}</strong> kart(y)
-                \u2192 r\u0119ka orientacyjnie <strong>${afterFat.after}</strong> (je\u015Bli usuwasz z r\u0119ki)
-                <div>Instrukcja: mo\u017Cesz usuwa\u0107 z r\u0119ki / talii / odrzuconych; potem tasujesz tali\u0119. Przyk\u0142ad: 1. trofeum = 1 karta.</div>
-              </li>
-              <li><strong>Faza III (dob\xF3r do 3):</strong> ${escapeHtml2(draw.note)}
-                <div>Po kroku doboru orientacyjnie: ${draw.afterDraw} na r\u0119ce, potem kup 1 z puli.</div>
-              </li>
-              <li><strong>Start tej pozycji przy stole:</strong> ${actionCardsHtml(start.cards, { height: 20 })} ${goldCoinsHtml(start.gold, { size: 22 })}</li>
-            </ul>
-            <div class="actions" style="margin-top:0.6rem">
-              <button type="button" class="btn btn-primary" data-apply-fatigue data-idx="${i}">
-                +1 reputacja i odejmij zm\u0119czenie z r\u0119ki (${fat} kart)
-              </button>
-              <button type="button" class="btn btn-secondary" data-apply-draw7 data-idx="${i}">
-                Ustaw r\u0119k\u0119 jak po doborze fazy III (3)
-              </button>
-            </div>
-          </details>
-        </article>
-      `;
-    }).join("");
-  }
-
-  // js/quests.js
-  function escapeHtml3(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
-  function ensureQuests(player) {
-    if (!player) return;
-    if (!Array.isArray(player.quests)) player.quests = [];
-    return player.quests;
-  }
-  function newQuestId() {
-    return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  }
-  function exploreDeckChooserHtml({ selected = null } = {}) {
-    return `
-    <div class="explore-chooser">
-      <h2 class="explore-chooser-title">Co eksplorujesz?</h2>
-      <p class="lead" style="margin:0">Kliknij kart\u0119: <strong>dzikie ost\u0119py</strong> albo <strong>miasto</strong>.</p>
-      <div class="explore-card-grid" role="group" aria-label="Talia eksploracji">
-        <div class="explore-card-slot">
-          <button type="button" class="explore-card ${selected === "wilds" ? "active" : ""}" data-explore-deck="wilds" aria-label="Dzikie ost\u0119py" aria-pressed="${selected === "wilds" ? "true" : "false"}">
-            <img src="./img/explore/wilds.png" alt="" width="180" height="272" decoding="async" draggable="false" />
-          </button>
-          <span class="explore-card-label"><strong>Dzikie ost\u0119py</strong></span>
-        </div>
-        <div class="explore-card-slot">
-          <button type="button" class="explore-card ${selected === "city" ? "active" : ""}" data-explore-deck="city" aria-label="Miasto" aria-pressed="${selected === "city" ? "true" : "false"}">
-            <img src="./img/explore/city.png" alt="" width="180" height="272" decoding="async" draggable="false" />
-          </button>
-          <span class="explore-card-label"><strong>Miasto</strong></span>
-        </div>
-      </div>
-    </div>
-  `;
-  }
-  function exploreResolveHtml({ deck, isSolo: isSolo2, player }) {
-    const deckLabel = deck === "wilds" ? "dzikie ost\u0119py" : "miasto";
-    const steps = isSolo2 ? `
-      <ol class="checklist">
-        <li>Dobierz kart\u0119 z talii <strong>${escapeHtml3(deckLabel)}</strong> (sam).</li>
-        <li>Zakryj rezultaty \u2014 czytaj tylko wst\u0119p i 2 opcje.</li>
-        <li>Wybierz opcj\u0119 A albo B; odczytaj <strong>tylko jej</strong> rezultat.</li>
-        <li>Efekt natychmiastowy \u2192 zastosuj poni\u017Cej (z\u0142oto / karty). Potem karta do pude\u0142ka.</li>
-        <li>Je\u015Bli wynik ma s\u0142owo <strong>Zadanie / Quest</strong> \u2192 dodaj zadanie poni\u017Cej (lokacja + nr karty zdarzenia).</li>
-      </ol>` : `
-      <ol class="checklist">
-        <li>Gracz po prawej dobiera z talii <strong>${escapeHtml3(deckLabel)}</strong>.</li>
-        <li>Czyta wst\u0119p + opcje <strong>bez</strong> rezultat\xF3w.</li>
-        <li>Ty wybierasz; s\u0142yszysz tylko wybrany rezultat.</li>
-        <li>Efekt natychmiastowy \u2192 dostosuj z\u0142oto/karty poni\u017Cej. Albo zapisz <strong>zadanie</strong>.</li>
-      </ol>`;
-    return `
-    ${questAddFormHtml()}
-    ${questsListHtml(player)}
-    <div class="guide-box">
-      <p class="step-kicker" style="margin:0">Karta przeczytana \xB7 ${escapeHtml3(deckLabel)}</p>
-      <h3 style="margin:0.25rem 0 0.4rem">Zastosuj efekt</h3>
-      ${steps}
-      <p class="note">Brak z\u0142ota na opcj\u0119 = nie mo\u017Cesz jej wybra\u0107. Robisz tyle efektu, ile da si\u0119.</p>
-      <p class="tip">Je\u015Bli karta daje <strong>\u017Ceton tropu</strong> \u2014 zaznacz 1 trop poni\u017Cej. <strong>Zadanie</strong> (lokacja + nr Event) zapisuj <strong>u g\xF3ry</strong>. Brak \u017Ceton\xF3w w stosie = ten fragment efektu przepada.</p>
-    </div>
-    ${resourceAdjustHtml(player, { title: "Po karcie \u2014 popraw tracker" })}
-  `;
-  }
-  function resourceAdjustHtml(player, { title = "Zasoby" } = {}) {
-    if (!player) return "";
-    return `
-    <div class="guide-box resource-adjust">
-      <p class="step-kicker" style="margin:0">${escapeHtml3(title)}</p>
-      <p class="lead" style="margin:0.3rem 0 0">Teraz: <strong>${player.cards ?? 0}</strong> kart \xB7 <strong>${player.gold ?? 0}</strong> z\u0142ota \xB7 <strong>${player.elixirs ?? 0}</strong> eliksir\xF3w</p>
-      <div class="tracker-grid" style="margin-top:0.65rem">
-        <label>Karty
-          <div class="num-row">
-            <button type="button" class="btn btn-secondary" data-adj="cards" data-delta="-1">\u2212</button>
-            <strong class="num-val">${player.cards ?? 0}</strong>
-            <button type="button" class="btn btn-secondary" data-adj="cards" data-delta="1">+</button>
-          </div>
-        </label>
-        <label>Z\u0142oto (monety)
-          <div class="num-row">
-            <button type="button" class="btn btn-secondary" data-adj="gold" data-delta="-1">\u2212</button>
-            <strong class="num-val">${player.gold ?? 0}</strong>
-            <button type="button" class="btn btn-secondary" data-adj="gold" data-delta="1">+</button>
-          </div>
-        </label>
-        <label>Eliksiry
-          <div class="num-row">
-            <button type="button" class="btn btn-secondary" data-adj="elixirs" data-delta="-1">\u2212</button>
-            <strong class="num-val">${player.elixirs ?? 0}</strong>
-            <button type="button" class="btn btn-secondary" data-adj="elixirs" data-delta="1">+</button>
-          </div>
-        </label>
-      </div>
-    </div>
-  `;
-  }
-  function questAddFormHtml() {
-    const opts = LOCATIONS.map(
-      (l) => `<option value="${escapeHtml3(l.id)}">${escapeHtml3(l.name)} (#${l.number})</option>`
-    ).join("");
-    return `
-    <div class="guide-box quest-add">
-      <p class="step-kicker" style="margin:0">${ICO.quest()} Zadania (u g\xF3ry)</p>
-      <p class="lead" style="margin:0.3rem 0 0">Tu zapisujesz zadania z kart (lokacja + nr Event) oraz doj\u015Bcie z \u017Cetonu tropienia. Po wej\u015Bciu na pole helper przypomni o karcie zdarzenia.</p>
-      <label>Tytu\u0142 / skr\xF3t z karty
-        <input type="text" id="quest-title" maxlength="80" placeholder="np. Quest: Kaer Seren / trop" />
-      </label>
-      <label>Lokacja do doj\u015Bcia
-        <select id="quest-loc">${opts}</select>
-      </label>
-      <label>Nr karty zdarzenia (Event) do przeczytania na miejscu
-        <input type="text" id="quest-event" maxlength="12" placeholder="np. 33" />
-      </label>
-      <label>Notatka (opcjonalnie)
-        <input type="text" id="quest-note" maxlength="120" placeholder="koszt wej\u015Bcia, teren \u017Cetonu\u2026" />
-      </label>
-      <div class="actions" style="margin-top:0.55rem">
-        <button type="button" class="btn btn-primary" id="quest-add-btn">Dodaj zadanie</button>
-      </div>
-    </div>
-  `;
-  }
-  function questsListHtml(player) {
-    const list = ensureQuests(player);
-    if (!list.length) {
-      return `<p class="note">Brak aktywnych zada\u0144.</p>`;
-    }
-    return `
-    <div class="quests-list">
-      <h3>${ICO.quest()} Twoje zadania</h3>
-      <ul class="checklist">
-        ${list.map((q) => {
-      const loc = locById(q.locationId);
-      return `<li data-quest-id="${escapeHtml3(q.id)}">
-              <strong>${escapeHtml3(q.title || "Zadanie")}</strong>
-              \u2192 ${loc ? escapeHtml3(loc.name) : "?"}
-              ${q.eventCard ? ` \xB7 Event <strong>#${escapeHtml3(String(q.eventCard))}</strong>` : ""}
-              ${q.note ? `<div class="note">${escapeHtml3(q.note)}</div>` : ""}
-              <button type="button" class="btn btn-secondary" data-quest-done="${escapeHtml3(q.id)}">Rozwi\u0105zane / usu\u0144</button>
-            </li>`;
-    }).join("")}
-      </ul>
-    </div>
-  `;
-  }
-  function questArrivalHtml(player, locId) {
-    const list = ensureQuests(player).filter((q) => q.locationId === locId);
-    if (!list.length) return "";
-    const loc = locById(locId);
-    return `
-    <div class="guide-box guide-quest-hit" role="alert">
-      <p class="step-kicker" style="margin:0">${ICO.quest()} Zadanie na tym polu</p>
-      <h3 style="margin:0.25rem 0 0.4rem">Jeste\u015B na <strong>${escapeHtml3(loc?.name || "?")}</strong></h3>
-      <p class="lead" style="margin:0"><strong>Faza I</strong> \u2014 mo\u017Cesz <em>opcjonalnie</em> rozwi\u0105za\u0107 zadanie teraz (Event z nr poni\u017Cej). To <strong>nie</strong> jest faza II.</p>
-      <p class="note" style="margin:0.35rem 0 0">Je\u015Bli na polu jest te\u017C potw\xF3r: zadanie rozwi\u0105zujesz w fazie I (opcjonalnie). W fazie II wybierasz <strong>tylko 1</strong> \u2014 walka jest <em>opcjonalna</em> (mo\u017Cesz zamiast niej medytowa\u0107 albo eksplorowa\u0107).</p>
-      <ul class="checklist">
-        ${list.map(
-      (q) => `
-          <li>
-            <strong>${escapeHtml3(q.title || "Zadanie")}</strong>
-            ${q.eventCard ? ` \u2014 gracz po prawej bierze kart\u0119 zdarzenia <strong>#${escapeHtml3(String(q.eventCard))}</strong> i czyta.` : " \u2014 sprawd\u017A kart\u0119 zadania (nr zdarzenia)."}
-            ${q.note ? `<div class="note">${escapeHtml3(q.note)}</div>` : ""}
-            <button type="button" class="btn btn-primary" data-quest-done="${escapeHtml3(q.id)}">Rozwi\u0105zane \u2014 usu\u0144 zadanie</button>
-          </li>`
-    ).join("")}
-      </ul>
-    </div>
-  `;
-  }
-  function turnSummaryHtml(player, { phase3Hint, schoolName, turnNumber, isSolo: isSolo2 } = {}) {
-    if (!player) return "";
-    const loc = player.locationId ? locById(player.locationId) : null;
-    const quests = ensureQuests(player);
-    const cards = player.cards ?? 0;
-    const gold = player.gold ?? 0;
-    const elixirs = player.elixirs ?? 0;
-    const hint = phase3Hint || {};
-    const turnLine = turnNumber != null ? `<li><strong>Tura:</strong> ${Number(turnNumber)}${isSolo2 ? ' <span class="note">(helper liczy automatycznie)</span>' : ""}</li>` : "";
-    return `
-    <div class="guide-box turn-summary">
-      <p class="step-kicker" style="margin:0">Koniec tury \u2014 podsumowanie</p>
-      <h3 style="margin:0.25rem 0 0.45rem">${escapeHtml3(player.name)}${schoolName ? ` \xB7 ${escapeHtml3(schoolName)}` : ""}</h3>
-      <ul class="checklist">
-        ${turnLine}
-        <li><strong>Lokalizacja:</strong> ${loc ? `${escapeHtml3(loc.name)} (#${loc.number})` : "\u2014"}</li>
-        <li><strong>Karty na r\u0119ce:</strong> ${cards} <span class="note">(po fazie III zwykle 3 przed/po kupnie \u2014 limit 7)</span></li>
-        <li><strong>Z\u0142oto:</strong> ${gold}</li>
-        <li><strong>Eliksiry:</strong> ${elixirs} / 4</li>
-        <li><strong>Reputacja:</strong> ${player.reputation ?? 0}</li>
-        <li><strong>Zadania otwarte:</strong> ${quests.length}${quests.length ? ` \u2014 ${quests.map((q) => {
-      const L = locById(q.locationId);
-      return `${escapeHtml3(q.title || "zadanie")}@${L ? escapeHtml3(L.name) : "?"}`;
-    }).join("; ")}` : ""}</li>
-      </ul>
-      ${hint.note ? `<p class="tip"><strong>Faza III (przypomnienie):</strong> ${escapeHtml3(hint.note)}</p>` : ""}
-      <p class="note">Je\u015Bli co\u015B nie gra po efekcie karty \u2014 wr\xF3\u0107 do Sto\u0142u / tracker\xF3w i popraw \u2212/+.</p>
-      ${questsListHtml(player)}
-    </div>
-  `;
   }
 
   // js/player-state.js
@@ -4086,6 +2319,2419 @@
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  // js/start-resources-screen.js
+  var RES_OPTS = { cardHeight: 140, coinSize: 56 };
+  function schoolById(id) {
+    return SCHOOLS.find((s) => s.id === id) || SCHOOLS[0];
+  }
+  function schoolArtSrc(id) {
+    return `./img/schools/${id === "kot" ? "kot-v10" : id}.png?v=10`;
+  }
+  function dealItemHtml(player, index, playerCount) {
+    const res = startResourcesFor(playerCount, index);
+    const sid = player.schoolId || SCHOOLS[0].id;
+    const school = schoolById(sid);
+    return `
+    <li class="deal-item order-item" data-idx="${index}">
+      <span class="order-pos">${index + 1}</span>
+      <span class="splash-medal-disc splash-medal-disc--${sid} order-medal" aria-hidden="true">
+        <img class="school-art school-art--${sid}" src="${schoolArtSrc(sid)}" alt="" width="72" height="72" decoding="async" />
+      </span>
+      <strong class="order-name">${escapeHtmlLite(player.name)}</strong>
+      <span class="order-school">${escapeHtmlLite(school.short)}</span>
+      ${orderStartResourcesHtml(res.cards, res.gold, RES_OPTS)}
+    </li>`;
+  }
+  function startResourcesDealIntro(solo) {
+    if (solo) {
+      return {
+        title: "Dobierz karty i z\u0142oto",
+        lead: "We\u017A podane poni\u017Cej karty z talii akcji oraz z\u0142oto z banku i u\u0142\xF3\u017C je na planszecie."
+      };
+    }
+    return {
+      title: "Dobierz karty i z\u0142oto",
+      lead: ""
+    };
+  }
+  function startResourcesDealListHtml({ roster, playerCount }) {
+    const list = roster || [];
+    return `
+    <ul class="deal-list order-list" data-count="${list.length}" style="--order-cols:${list.length}">
+      ${list.map((p, i) => dealItemHtml(p, i, playerCount)).join("")}
+    </ul>`;
+  }
+
+  // js/screen-transition.js
+  var FLOW_DURATION_MS = 380;
+  function motionEnabled() {
+    return typeof window.matchMedia !== "function" || !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+  function viewTransitionsSupported() {
+    return typeof document.startViewTransition === "function";
+  }
+  function legacyPanelLeaveThen(next) {
+    const appEl2 = document.getElementById("app");
+    const panel = appEl2?.querySelector(".panel");
+    if (!panel || !motionEnabled()) {
+      next();
+      return Promise.resolve();
+    }
+    if (panel.classList.contains("is-leaving")) {
+      return new Promise((resolve) => {
+        window.setTimeout(() => {
+          next();
+          resolve();
+        }, FLOW_DURATION_MS + 30);
+      });
+    }
+    panel.classList.add("is-leaving");
+    return new Promise((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        panel.removeEventListener("animationend", onEnd);
+        next();
+        resolve();
+      };
+      const onEnd = (event) => {
+        if (event.target === panel) finish();
+      };
+      panel.addEventListener("animationend", onEnd);
+      window.setTimeout(finish, FLOW_DURATION_MS + 40);
+    });
+  }
+  function markPanelEntering() {
+    if (viewTransitionsSupported() || !motionEnabled()) return;
+    const appEl2 = document.getElementById("app");
+    const panel = appEl2?.querySelector(".panel");
+    if (!panel) return;
+    panel.classList.remove("is-leaving");
+    panel.classList.add("is-entering");
+    const done = () => {
+      panel.classList.remove("is-entering");
+      panel.removeEventListener("animationend", onEnd);
+    };
+    const onEnd = (event) => {
+      if (event.target === panel) done();
+    };
+    panel.addEventListener("animationend", onEnd);
+    window.setTimeout(done, FLOW_DURATION_MS + 50);
+  }
+  function runScreenTransition(update, { direction = "forward" } = {}) {
+    const root = document.documentElement;
+    if (!motionEnabled()) {
+      update();
+      return Promise.resolve();
+    }
+    root.dataset.vtDir = direction;
+    if (viewTransitionsSupported()) {
+      try {
+        const vt = document.startViewTransition(() => {
+          update();
+        });
+        return vt.finished.catch(() => {
+        }).finally(() => {
+          delete root.dataset.vtDir;
+        });
+      } catch {
+        delete root.dataset.vtDir;
+      }
+    }
+    return legacyPanelLeaveThen(() => {
+      update();
+      markPanelEntering();
+      delete root.dataset.vtDir;
+    });
+  }
+
+  // js/map-setup-pawns.js
+  function schoolById2(id) {
+    return SCHOOLS.find((s) => s.id === id) || SCHOOLS[0];
+  }
+  function mapPawnsPrepCopy() {
+    return {
+      title: "\u017Betony i figurki na mapie",
+      lead: "Po\u0142\xF3\u017C \u017Ceton szko\u0142y na polu <strong>0</strong> toru reputacji (lewy dolny r\xF3g mapy). Figurki wied\u017Amin\xF3w ustaw na obszarach startowych szk\xF3\u0142 \u2014 jak na podgl\u0105dzie."
+    };
+  }
+  function mapPawnsRosterHintHtml(roster) {
+    return (roster || []).map((p, i) => {
+      const sid = p.schoolId || SCHOOLS[0].id;
+      const school = schoolById2(sid);
+      const start = locById(schoolStartId(sid));
+      const where = start?.name || "\u2014";
+      return `<li><strong>${escapeHtmlLite(p.name || `Gracz ${i + 1}`)}</strong> \xB7 ${escapeHtmlLite(school.short)} \u2192 ${escapeHtmlLite(where)}</li>`;
+    }).join("");
+  }
+  function mapPawnsPrepPanelHtml({ roster }) {
+    const sc = mapPawnsPrepCopy();
+    const list = mapPawnsRosterHintHtml(roster);
+    return `
+    <div class="map-pawns-prep-caption player-board-prep-panel">
+      <h2 class="player-board-prep-panel__title">${sc.title}</h2>
+      <p class="player-board-prep-panel__body">${sc.lead}</p>
+      ${list ? `<ul class="checklist map-pawns-prep-list">${list}</ul>` : ""}
+    </div>`;
+  }
+
+  // js/lexicon.js
+  var ATTRIBUTES = [
+    {
+      id: "atak",
+      name: "Atak",
+      body: "Ile kart dobierasz na koniec swojej tury walki (po kombinacji), \xB1 modyfikatory z kart."
+    },
+    {
+      id: "obrona",
+      name: "Obrona",
+      body: "Limit tarczy. +1 obrona \u2192 natychmiast +1 tarcza (max 5). Tarcza nigdy > obrona. Po walce ustaw tarcz\u0119 = obrona."
+    },
+    {
+      id: "alchemia",
+      name: "Alchemia",
+      body: "+1 alchemia \u2192 dobierz 1 eliksir. W ca\u0142ej walce mo\u017Cesz zu\u017Cy\u0107 \u0142\u0105cznie tyle eliksir\xF3w, ile wynosi alchemia. Limit posiadania: 4 eliksiry."
+    },
+    {
+      id: "zdolnosc",
+      name: "Zdolno\u015B\u0107 specjalna (szko\u0142a)",
+      body: "Unikalna dla szko\u0142y. Raz na walk\u0119 (chyba \u017Ce inaczej). Po podniesieniu poziomu nie u\u017Cywasz efekt\xF3w ni\u017Cszych poziom\xF3w. Trening tylko w swojej szkole."
+    }
+  ];
+  var SCHOOL_SPECIALTIES = [
+    {
+      id: "wilk",
+      name: "Szko\u0142a Wilka \u2014 szermierka",
+      body: "Raz na walk\u0119, gdy zagrasz kombinacj\u0119 3+ kart: mo\u017Cesz zada\u0107 dodatkowe obra\u017Cenia; od II poziomu tak\u017Ce dobra\u0107 dodatkowe karty (wg ikon na torze)."
+    },
+    {
+      id: "gryf",
+      name: "Szko\u0142a Gryfa \u2014 magia",
+      body: "Raz na walk\u0119: dobierz 1 kart\u0119 z wierzchu stosu odrzuconych, potem mo\u017Cesz odrzuci\u0107 cz\u0119\u015B\u0107 kart z r\u0119ki. Na IV\u2013V: przejrzyj ca\u0142y stos odrzuconych i we\u017A dowoln\u0105 1 na r\u0119k\u0119."
+    },
+    {
+      id: "niedzwiedz",
+      name: "Szko\u0142a Nied\u017Awiedzia \u2014 zbroja",
+      body: "Raz na walk\u0119, w Twojej turze walki, gdy tarcza = 0: natychmiast dobierz z talii wytrzyma\u0142o\u015Bci; od II tak\u017Ce podnie\u015B tarcz\u0119 (wg ikon)."
+    },
+    {
+      id: "kot",
+      name: "Szko\u0142a Kota \u2014 szybko\u015B\u0107",
+      body: "Raz na walk\u0119, w pierwszej turze walki: podejrzyj wierzchnie karty talii wytrzyma\u0142o\u015Bci; cz\u0119\u015B\u0107 od\u0142\xF3\u017C na wierzch w wybranej kolejno\u015Bci, reszt\u0119 we\u017A na r\u0119k\u0119. Na I, IV i V: wszystkie podejrzane zostaj\u0105 na r\u0119ce."
+    },
+    {
+      id: "zmija",
+      name: "Szko\u0142a \u017Bmii \u2014 zatruta stal",
+      body: "Raz na walk\u0119, gdy przeciwnik odrzuca karty w wyniku Twojego ataku: podejrzyj/przestaw wierzchnie karty jego talii (liczba z toru); od II mo\u017Cesz te\u017C odrzuci\u0107 wskazan\u0105 liczb\u0119 \u2014 wtedy musisz to zrobi\u0107."
+    }
+  ];
+  var COMBAT_STEPS = `
+  <h3>Tura walki wied\u017Amina (4 kroki)</h3>
+  <ol class="checklist">
+    <li><strong>1. Eliksiry / zdolno\u015B\u0107 / ekwipunek i trofea</strong> \u2014 eliksiry \u0142\u0105cznie \u2264 alchemii w ca\u0142ej walce; zdolno\u015B\u0107 raz na walk\u0119; efekty \u201Eraz na walk\u0119\u201D opcjonalne.</li>
+    <li><strong>2. Kombinacja</strong> \u2014 zagraj \u22651 kart\u0119 z r\u0119ki (obowi\u0105zkowe, je\u015Bli masz karty). Kolejne musz\u0105 pasowa\u0107 przed\u0142u\u017Ceniami. 1 karta na r\u0119ce = grasz t\u0119 jedn\u0105.</li>
+    <li><strong>3. Rozpatrzenie</strong> \u2014 suma symboli obra\u017Ce\u0144: potw\xF3r zrzuca tyle kart ze swojej talii walki. Inne symbole (tarcza, \xB1dob\xF3r\u2026) wg ikon.</li>
+    <li><strong>4. Dob\xF3r</strong> \u2014 z talii wytrzyma\u0142o\u015Bci dobierz = poziom <strong>Ataku</strong> \xB1 modyfikatory. Na r\u0119k\u0119. Limit 7 w walce = stop.</li>
+  </ol>
+  <p class="tip"><strong>Co liczy\u0107?</strong> Obra\u017Cenia = liczba mieczy/symboli obra\u017Ce\u0144 na zagranych kartach (i eliksirach). Atak na planszetce = ile kart dobierasz po swoim ataku. Talia potwora = jego \u017Cycie.</p>
+  <p class="tip">Potw\xF3r: szar\u017Ca albo ugryzienie \u2192 odkryj 1 kart\u0119 walki \u2192 efekty. Solo: ko\u015B\u0107 1\u20133 szar\u017Ca / 4\u20136 ugryzienie.</p>
+  <p class="warn">Obra\u017Cenia na Ciebie: najpierw tarcza, potem wierzch Twojej talii wytrzyma\u0142o\u015Bci, potem r\u0119ka (typowo; wyj\u0105tki na karcie potwora).</p>
+`;
+  var LEVEL_UP = `
+  <h3>Awans poziomu wied\u017Amina</h3>
+  <p>Gdy <strong>wszystkie 4</strong> znaczniki atrybut\xF3w s\u0105 <em>powy\u017Cej</em> aktualnego poziomu wied\u017Amina \u2192 awans natychmiast.</p>
+  <ul class="checklist">
+    <li>Na poziom II lub III: dobierz <strong>1</strong> kart\u0119 z talii akcji.</li>
+    <li>Na poziom IV lub V: dobierz <strong>2</strong> karty.</li>
+    <li>Poziom wied\u017Amina nie spada, nawet gdy atrybuty spadn\u0105.</li>
+    <li>Atrybut na V nie mo\u017Ce by\u0107 obni\u017Cony.</li>
+  </ul>
+`;
+  var TRAIL_LEXICON = `
+  <h3>\u017Beton obszaru vs \u017Ceton tropu</h3>
+  <ul class="checklist">
+    <li><strong>\u017Beton obszaru</strong> \u2014 \u017Ceton z puli las/g\xF3ry/woda obok planszy. Jedna strona: nazwa lokacji, druga: symbol terenu.</li>
+    <li><strong>Zadanie tropienia</strong> \u2014 \u017Ceton le\u017Cy u Ciebie <em>nazw\u0105 do g\xF3ry</em> + 1 z\u0142oto na nim. Cel: doj\u015B\u0107 ruchem na t\u0119 lokacj\u0119.</li>
+    <li><strong>\u017Beton tropu</strong> \u2014 po doj\u015Bciu zbierasz z\u0142oto i odwracasz \u017Ceton na symbol terenu. Oznacza, \u017Ce tropisz potwora z tego terenu \u2192 w walce z nim cz\u0119sto <strong>zaczynasz pierwszy</strong>.</li>
+    <li>Max <strong>1 trop na rodzaj terenu</strong>. Konflikt (nowy tego samego) \u2192 stare zadanie/trop znika bez z\u0142ota z \u017Cetonu (FAQ #10).</li>
+  </ul>
+`;
+  var WHAT_WE_DONT_HAVE = `
+  <h3>Czego helper NIE zast\u0105pi</h3>
+  <p class="lead">Nie mam dost\u0119pu do pe\u0142nej bazy ilustracji ani pe\u0142nych tekst\xF3w wszystkich kart z pude\u0142ka.</p>
+  <ul class="checklist">
+    <li><strong>28 kart potwor\xF3w</strong> \u2014 PW i zdolno\u015B\u0107 czytaj z karty na stole (helper prowadzi procedur\u0119 walki).</li>
+    <li><strong>90 kart akcji + startowe</strong> \u2014 teksty i symbole z kart fizycznych.</li>
+    <li><strong>28 eliksir\xF3w, ekwipunek, towarzysze</strong> \u2014 efekty z karty / zdarzenia.</li>
+    <li><strong>72 eksploracji + 56 zdarze\u0144</strong> \u2014 fabularne teksty zawsze z karty (helper m\xF3wi tylko <em>jak</em> czyta\u0107 A/B).</li>
+  </ul>
+  <p class="tip">Tak ma by\u0107: przy stole karty = tre\u015B\u0107, telefon/laptop = kto kiedy co robi i FAQ. Pe\u0142ne skopiowanie wszystkich kart do sieci \u0142ama\u0142oby prawa CDPR/Go On Board.</p>
+`;
+  function lexiconHtml() {
+    const attrs = ATTRIBUTES.map(
+      (a) => `<li><strong>${a.name}</strong><div>${a.body}</div></li>`
+    ).join("");
+    const schools = SCHOOL_SPECIALTIES.map(
+      (s) => `<li><strong>${s.name}</strong><div>${s.body}</div></li>`
+    ).join("");
+    return `
+    ${WHAT_WE_DONT_HAVE}
+    <h3>Atrybuty (wszyscy)</h3>
+    <ul class="checklist">${attrs}</ul>
+    ${LEVEL_UP}
+    <h3>Zdolno\u015Bci szk\xF3\u0142 (podstawka)</h3>
+    <ul class="checklist">${schools}</ul>
+    <p class="note">Dok\u0142adne liczby obra\u017Ce\u0144/doboru na ka\u017Cdym poziomie I\u2013V s\u0105 na <strong>planszetce</strong> (ikony obok toru) \u2014 helper nie zast\u0119puje ikon.</p>
+    ${TRAIL_LEXICON}
+    ${COMBAT_STEPS}
+  `;
+  }
+
+  // js/guide.js
+  var MOVE_COSTS = [
+    {
+      id: "match",
+      title: "1 karta terenu",
+      short: "Pasuj\u0105cy las / g\xF3ry / woda",
+      cards: 1,
+      gold: 0,
+      tip: "Odrzu\u0107 1 kart\u0119 z ikon\u0105 terenu takiego jak miejsce, na kt\xF3re idziesz."
+    },
+    {
+      id: "wild",
+      title: "1 karta uniwersalna",
+      short: "Woda+las+g\xF3ry na karcie",
+      cards: 1,
+      gold: 0,
+      tip: "Symbol uniwersalny = woda + las + g\xF3ry w jednym okr\u0119gu. Liczy si\u0119 jak dowolny teren. To nie \u017Ceton z planszy."
+    },
+    {
+      id: "two",
+      title: "2 dowolne karty",
+      short: "Bez dopasowania terenu",
+      cards: 2,
+      gold: 0,
+      tip: "Odrzu\u0107 dowolne 2 karty \u2192 mo\u017Cesz wej\u015B\u0107 na dowolnego s\u0105siada."
+    },
+    {
+      id: "card_gold",
+      title: "1 karta + 1 z\u0142oto",
+      short: "Mieszany koszt",
+      cards: 1,
+      gold: 1,
+      tip: "Odrzu\u0107 1 dowoln\u0105 kart\u0119 i zap\u0142a\u0107 1 z\u0142oto \u2192 dowolny s\u0105siad."
+    }
+  ];
+  function moveCostById(id) {
+    return MOVE_COSTS.find((c) => c.id === id);
+  }
+  function applyMoveCost(player, costId) {
+    const cost = moveCostById(costId);
+    if (!player || !cost) return { ok: false, reason: "Brak gracza / kosztu." };
+    if ((player.cards || 0) < cost.cards) {
+      return { ok: false, reason: `Za ma\u0142o kart na r\u0119ce (potrzeba ${cost.cards}).` };
+    }
+    if ((player.gold || 0) < cost.gold) {
+      return { ok: false, reason: `Za ma\u0142o z\u0142ota (potrzeba ${cost.gold}).` };
+    }
+    player.cards = Math.max(0, (player.cards || 0) - cost.cards);
+    player.gold = Math.max(0, (player.gold || 0) - cost.gold);
+    player.lastMoveCost = costId;
+    return { ok: true, cost };
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function terrainChip(terrainId) {
+    const t = TERRAIN[terrainId];
+    if (!t) return "";
+    const ico = terrainId === "forest" ? ICO.forest() : terrainId === "mountain" ? ICO.mountain() : terrainId === "water" ? ICO.water() : "";
+    return `${ico} <strong>${escapeHtml(t.label)}</strong>`;
+  }
+  function moveCostChooserHtml({ fromLoc, toLoc, playerName, selectedCostId }) {
+    const to = toLoc;
+    const from = fromLoc;
+    const terrainLine = to ? `Cel: <strong>${escapeHtml(to.name)}</strong> (#${to.number}) \u2014 teren ${terrainChip(to.terrain)}` : "Wybierz s\u0105siada na mapie / li\u015Bcie.";
+    const fromLine = from ? `Z: <strong>${escapeHtml(from.name)}</strong> (#${from.number})` : "";
+    return `
+    <div class="guide-box guide-move" role="region" aria-label="Koszt ruchu">
+      <p class="step-kicker" style="margin:0">Ruch \u2014 prowadzenie</p>
+      <h3 style="margin:0.25rem 0 0.4rem">Dok\u0105d idziesz${playerName ? `, ${escapeHtml(playerName)}` : ""}?</h3>
+      <p class="lead" style="margin:0">${terrainLine}</p>
+      ${fromLine ? `<p class="note" style="margin:0.35rem 0 0">${fromLine}</p>` : ""}
+      <p class="tip" style="margin:0.65rem 0 0.4rem"><strong>Za ten ruch musisz co\u015B odda\u0107.</strong> Kliknij, co wybra\u0142e\u015B z r\u0119ki:</p>
+      <div class="choice-grid move-cost-grid">
+        ${MOVE_COSTS.map(
+      (c) => `
+          <button type="button" class="choice ${selectedCostId === c.id ? "active" : ""}" data-move-cost="${c.id}">
+            <strong>${escapeHtml(c.title)}</strong>
+            <span>${escapeHtml(c.short)}</span>
+            <span class="note">${escapeHtml(c.tip)}</span>
+          </button>`
+    ).join("")}
+      </div>
+      <p class="note" style="margin:0.55rem 0 0">Po klikni\u0119ciu helper odejmie karty / z\u0142oto w trackerze (mo\u017Cesz potem poprawi\u0107 r\u0119cznie).</p>
+    </div>
+  `;
+  }
+  function affordNote(player, cardsNeed, goldNeed) {
+    if (!player) return "";
+    const cardsOk = (player.cards || 0) >= cardsNeed;
+    const goldOk = (player.gold || 0) >= goldNeed;
+    if (cardsOk && goldOk) return "masz zasoby";
+    const miss = [];
+    if (!cardsOk) miss.push(`kart ${player.cards || 0}/${cardsNeed}`);
+    if (!goldOk) miss.push(`z\u0142ota ${player.gold || 0}/${goldNeed}`);
+    return `uwaga: ${miss.join(", ")}`;
+  }
+  function destinationPreviewHtml(toId, { player, roster = [], monsters = {} } = {}) {
+    const to = locById(toId);
+    if (!to) return `<p class="warn">Nieznane pole.</p>`;
+    const mon = monsters?.[toId];
+    const others = (roster || []).filter(
+      (r) => r && r !== player && r.locationId === toId
+    );
+    const t = TERRAIN[to.terrain];
+    return `
+    <div class="guide-box guide-dest-preview">
+      <p class="step-kicker" style="margin:0">Cel ruchu</p>
+      <h3 style="margin:0.25rem 0 0.4rem">${escapeHtml(to.name)} (#${to.number})</h3>
+      <p class="lead" style="margin:0">Teren: ${terrainChip(to.terrain)} ${t ? escapeHtml(t.label) : ""}</p>
+      ${mon ? `<p class="warn" style="margin-top:0.55rem">${ICO.monster()} <strong>Potw\xF3r</strong> na polu${mon.level ? ` (poz. ${escapeHtml(String(mon.level))})` : ""} \u2014 w fazie II mo\u017Cesz walczy\u0107 (opcjonalnie).</p>` : ""}
+      ${others.length ? `<p class="warn" style="margin-top:0.55rem">${ICO.specialty()} Inny wied\u017Amin: <strong>${others.map((o) => escapeHtml(o.name)).join(", ")}</strong> \u2014 mo\u017Cliwa walka / poker.</p>` : ""}
+      ${locationActionGuideHtml(to, { heading: "Co zyskasz / zrobisz na tym polu (znak)" })}
+    </div>
+  `;
+  }
+  function mapLocPopupHtml(toId, { player, roster = [], monsters = {} } = {}) {
+    const to = locById(toId);
+    if (!to) return "";
+    const mon = monsters?.[toId];
+    const others = (roster || []).filter(
+      (r) => r && r !== player && r.locationId === toId
+    );
+    const t = TERRAIN[to.terrain];
+    const hint = actionHintFor(to) || LOCATION_ACTION_HINTS[to.actionKey] || "";
+    return `
+    <p class="step-kicker" style="margin:0">Cel ruchu</p>
+    <h3 class="map-loc-popup-title">${escapeHtml(to.name)} <span class="loc-num">#${to.number}</span></h3>
+    <p class="map-loc-popup-meta">${terrainChip(to.terrain)} ${t ? escapeHtml(t.label) : ""}${to.school ? " \xB7 szko\u0142a" : ""}</p>
+    ${to.actionKey ? `<div class="map-loc-popup-action">${actionIconHtml(to.actionKey, { width: 100, height: 34 })}${hint ? `<p class="map-loc-popup-hint">${escapeHtml(hint)}</p>` : ""}</div>` : hint ? `<p class="map-loc-popup-hint"><strong>Znak:</strong> ${escapeHtml(hint)}</p>` : ""}
+    ${mon ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.monster()} <strong>Potw\xF3r</strong>${mon.level ? ` (poz. ${escapeHtml(String(mon.level))})` : ""} \u2014 walka opcjonalna (faza II)</p>` : ""}
+    ${others.length ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.specialty()} Inny wied\u017Amin: <strong>${others.map((o) => escapeHtml(o.name)).join(", ")}</strong></p>` : ""}
+  `;
+  }
+  function neighborPickerHtml(fromId, { player, monsters } = {}) {
+    const from = locById(fromId);
+    if (!from) {
+      return `<p class="warn">Brak pozycji startowej \u2014 wr\xF3\u0107 do <strong>Gracze</strong> i wybierz szko\u0142\u0119 (pionek stawia si\u0119 automatycznie na szkole).</p>`;
+    }
+    const neigh = neighborsOf(fromId).map((id) => locById(id)).filter(Boolean);
+    if (!neigh.length) {
+      return `<p class="warn">Brak s\u0105siad\xF3w w schemacie \u2014 sprawd\u017A map\u0119.</p>`;
+    }
+    const hasMonster = (locId) => {
+      const m = monsters?.[locId];
+      return Boolean(m && m.count > 0);
+    };
+    return `
+    <div class="guide-box guide-destinations">
+      <p class="step-kicker" style="margin:0">Dok\u0105d mo\u017Cesz i\u015B\u0107</p>
+      <p class="lead" style="margin:0.35rem 0 0">Stoisz na <strong>${escapeHtml(from.name)}</strong> (#${from.number}). Kliknij cel \u2014 potem wybierzesz dok\u0142adny koszt z r\u0119ki.</p>
+      <div class="choice-grid move-dest-grid">
+        ${neigh.map((n) => {
+      const t = TERRAIN[n.terrain];
+      const tLabel = t?.label || n.terrain;
+      const matchOk = affordNote(player, 1, 0);
+      const twoOk = affordNote(player, 2, 0);
+      const mixOk = affordNote(player, 1, 1);
+      const mon = hasMonster(n.id);
+      return `
+          <button type="button" class="choice ${mon ? "choice-danger" : ""}" data-move-to="${n.id}">
+            <strong>${escapeHtml(n.name)} (#${n.number})${mon ? ` ${ICO.monster()} potw\xF3r!` : ""}</strong>
+            <span>Teren celu: ${terrainChip(n.terrain)}</span>
+            ${mon ? `<span class="warn" style="margin:0.25rem 0 0">Wej\u015Bcie \u2192 helper odpala walk\u0119</span>` : ""}
+            <span class="move-cost-lines">
+              <span><strong>Najtaniej:</strong> 1 karta ${escapeHtml(tLabel)} <em>(${escapeHtml(matchOk)})</em></span>
+              <span><strong>Albo:</strong> 1\xD7 uniwersalna (3 tereny) \xB7 2 dowolne karty <em>(${escapeHtml(twoOk)})</em> \xB7 1 karta + 1 z\u0142oto <em>(${escapeHtml(mixOk)})</em></span>
+            </span>
+          </button>`;
+    }).join("")}
+      </div>
+      <p class="note" style="margin:0.55rem 0 0">Na mapie (St\xF3\u0142) s\u0105siedzi s\u0105 pod\u015Bwietleni na z\u0142oto, gdy ruszasz si\u0119 w turze.</p>
+    </div>
+  `;
+  }
+  function locationActionSteps(loc) {
+    if (!loc) {
+      return {
+        title: "Brak lokacji",
+        steps: ["Wybierz szko\u0142\u0119 w zak\u0142adce Gracze \u2014 pionek staje na szkole startowej."],
+        tip: ""
+      };
+    }
+    const key = loc.actionKey;
+    const hint = actionHintFor(loc) || LOCATION_ACTION_HINTS[key] || "";
+    const base = {
+      title: `${loc.name} (#${loc.number})`,
+      tip: hint
+    };
+    switch (key) {
+      case "schoolTrain":
+        return {
+          ...base,
+          steps: [
+            "To szko\u0142a wied\u017Ami\u0144ska (z\u0142oty punkt na schemacie).",
+            "Wybierz 1 atrybut: atak / obrona / alchemia / specjalno\u015B\u0107.",
+            "Zap\u0142a\u0107 z\u0142otem tyle, ile wynosi poziom DOCZELOWY (aktualny + 1) \u2014 zwykle 2, 3, 4 albo 5.",
+            "Podnie\u015B ten atrybut o +1 na swojej planszy.",
+            "Zdolno\u015B\u0107 szko\u0142y: tylko we w\u0142asnej szkole (nie w cudzej).",
+            "T\u0119 konkretn\u0105 akcj\u0119 szko\u0142y najwy\u017Cej raz na tur\u0119."
+          ]
+        };
+      case "trailGold":
+        return {
+          ...base,
+          steps: [
+            "We\u017A od razu +1 z\u0142oto do kieszeni (z banku).",
+            "Opcja \u2014 zadanie tropienia: zap\u0142a\u0107 1 z\u0142oto.",
+            "Dobierz \u017Ceton obszaru o terenie takim, jak teren POTWORA, kt\xF3rego tropisz (las/g\xF3ry/woda).",
+            "Po\u0142\xF3\u017C \u017Ceton nazw\u0105 do g\xF3ry na planszy gracza i po\u0142\xF3\u017C na nim 1 z\u0142oto z banku.",
+            "Gdy wejdziesz p\xF3\u017Aniej na t\u0119 nazw\u0119: zbierz z\u0142oto z \u017Cetonu i odwr\xF3\u0107 go \u2192 masz \u017Ceton tropu.",
+            "Limit: max 1 trop na ka\u017Cdy rodzaj terenu."
+          ]
+        };
+      case "dicePoker":
+        return {
+          ...base,
+          steps: [
+            "To pole z ikon\u0105 ko\u015Bci \u2014 poker z miejscowymi.",
+            "Multi: Ty i przeciwnik musicie mie\u0107 \u22651 z\u0142oto; wp\u0142acacie do puli (zwykle + bank).",
+            "Solo: wp\u0142a\u0107 1 z\u0142oto i graj vs tabela na karcie pomocy solo.",
+            "Rzu\u0107 5 ko\u015B\u0107mi, raz mo\u017Cesz przerzuci\u0107 wybrane.",
+            "Najlepszy uk\u0142ad wygrywa pul\u0119 / nagrod\u0119 z tabeli.",
+            "Uwaga: po pokerze z kim\u015B nie walczysz z nim w fazie II tej tury."
+          ]
+        };
+      case "cleanPool":
+        return {
+          ...base,
+          steps: [
+            "G\xF3ra znaku: masz 0 z\u0142ota \u2192 bierz +1 z\u0142oto (darmowy zastrzyk).",
+            "D\xF3\u0142 znaku: pola puli kart z p\u0142omieniem = mo\u017Cesz SPALI\u0106 (usun\u0105\u0107 z gry) kart\u0119 z tego slotu.",
+            "Na Wyzimie zwykle mo\u017Cesz wyczy\u015Bci\u0107 wskazane sloty (2. i 4.) \u2014 sp\xF3jrz na plansz\u0119.",
+            "Akcj\u0119 obszaru (ka\u017Cdy konkretny efekt) najwy\u017Cej raz na tur\u0119."
+          ]
+        };
+      case "trashDraw":
+        return {
+          ...base,
+          steps: [
+            "Znak Vengerberg: usu\u0144 1 kart\u0119 z r\u0119ki z gry.",
+            "Kup 1 kart\u0119 z odkrytej puli na planszy.",
+            "Koszt nowej karty mo\u017Ce by\u0107 ni\u017Cszy, r\xF3wny albo o 1 wy\u017Cszy od kosztu usuni\u0119tej.",
+            "We\u017A kupion\u0105 kart\u0119 na r\u0119k\u0119. Raz na tur\u0119."
+          ]
+        };
+      case "defenseLevel":
+        return {
+          ...base,
+          steps: [
+            "Znak: OBRONA \u2264 POZIOM wied\u017Amina.",
+            "Sprawd\u017A: Tw\xF3j poziom obrony \u2264 Tw\xF3j poziom postaci?",
+            "Je\u015Bli tak \u2192 +1 obrona (i zwykle tarcza dogania obron\u0119 przy awansie).",
+            "Je\u015Bli nie \u2014 nie bierzesz darmowego treningu obrony tutaj."
+          ]
+        };
+      case "alchemyLevel":
+        return {
+          ...base,
+          steps: [
+            "Znak: + alchemia (tylko gdy alchemia \u2264 poziom wied\u017Amina).",
+            "Podnie\u015B alchemi\u0119 o +1.",
+            "Przy ka\u017Cdym podniesieniu alchemii dobierasz 1 kart\u0119 eliksiru (limit 4)."
+          ]
+        };
+      case "specialtyLevel":
+        return {
+          ...base,
+          steps: [
+            "Znak: ZDOLNO\u015A\u0106 SPECJALNA \u2264 POZIOM.",
+            "Je\u015Bli specjalno\u015B\u0107 \u2264 poziom wied\u017Amina \u2192 +1 specjalno\u015B\u0107.",
+            "Raz na tur\u0119 ta akcja."
+          ]
+        };
+      case "attackLevel":
+        return {
+          ...base,
+          steps: [
+            "Znak: ATAK \u2264 POZIOM.",
+            "Je\u015Bli atak \u2264 poziom wied\u017Amina \u2192 +1 atak.",
+            "Darmowy trening \u2014 bez p\u0142acenia z\u0142otem (w przeciwie\u0144stwie do szko\u0142y)."
+          ]
+        };
+      case "gainElixir":
+      case "cintraElixir":
+        return {
+          ...base,
+          steps: [
+            "Znak: + eliksir (butelka / karta eliksiru).",
+            "Dobierz 1 kart\u0119 eliksiru.",
+            "Limit: maksymalnie 4 eliksiry.",
+            "Raz na tur\u0119 ta akcja obszaru."
+          ]
+        };
+      default:
+        return {
+          ...base,
+          steps: [
+            hint || "Sp\xF3jrz na znak pod nazw\u0105 lokacji na planszy i wykonaj go raz w tej turze.",
+            "Potem mo\u017Cesz i\u015B\u0107 dalej (kolejny ruch za kart\u0119) albo przej\u015B\u0107 do fazy II."
+          ]
+        };
+    }
+  }
+  function locationActionGuideHtml(loc, { heading = "Akcja tego pola (znaki na planszy)" } = {}) {
+    const g = locationActionSteps(loc);
+    if (!loc) {
+      return `<div class="guide-box"><p class="warn">${escapeHtml(g.steps[0])}</p></div>`;
+    }
+    const icon = actionIconHtml(loc.actionKey, { width: 120, height: 40 });
+    return `
+    <div class="guide-box guide-loc" role="region" aria-label="Akcja obszaru">
+      <p class="step-kicker" style="margin:0">${escapeHtml(heading)}</p>
+      <h3 style="margin:0.25rem 0 0.35rem">${escapeHtml(g.title)}</h3>
+      ${icon ? `<div class="loc-action-icon" title="Znak pod nazw\u0105 miejscowo\u015Bci">${icon}</div>` : ""}
+      ${g.tip ? `<p class="lead" style="margin:0.35rem 0 0">${escapeHtml(g.tip)}</p>` : ""}
+      <ol class="checklist guide-steps">
+        ${g.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
+      </ol>
+      <p class="note">Akcja <strong>fazy I</strong> \u2014 opcjonalna, raz na tur\u0119. Nie myl z faz\u0105 II (walka / medytacja / eksploracja).</p>
+    </div>
+  `;
+  }
+  function exploreGuideHtml(loc, isSolo2) {
+    const locBlock = loc ? locationActionGuideHtml(loc, {
+      heading: "Znaki na Twoim polu (przypomnienie \u2014 to by\u0142a faza I)"
+    }) : `<p class="note">Nie masz ustawionej lokacji \u2014 ustaw j\u0105 na Stole, \u017Ceby zobaczy\u0107 znaki pola.</p>`;
+    const phase2 = isSolo2 ? `
+      <ol class="checklist">
+        <li>Wybierz tali\u0119: <strong>miasto</strong> albo <strong>dzikie ost\u0119py</strong>.</li>
+        <li>Dobierz kart\u0119 sam.</li>
+        <li>Zakryj rezultaty \u2014 czytasz tylko wst\u0119p i 2 opcje.</li>
+        <li>Wybierz opcj\u0119; odczytaj tylko jej rezultat.</li>
+        <li>Karta do pude\u0142ka albo zostaje jako <strong>zadanie</strong>.</li>
+      </ol>` : `
+      <ol class="checklist">
+        <li>Wybierz: <strong>miasto</strong> albo <strong>dzikie ost\u0119py</strong>.</li>
+        <li>Gracz po prawej dobiera i czyta wst\u0119p + opcje <strong>bez</strong> rezultat\xF3w.</li>
+        <li>Ty wybierasz; s\u0142yszysz tylko wybrany rezultat.</li>
+        <li>Karta do pude\u0142ka albo jako <strong>zadanie</strong>.</li>
+      </ol>`;
+    return `
+    <div class="guide-box guide-explore">
+      <p class="step-kicker" style="margin:0">Faza II \u2014 eksploracja (karty)</p>
+      <h3 style="margin:0.25rem 0 0.4rem">Co robi\u0107 teraz</h3>
+      <p class="lead" style="margin:0">To NIE jest znak pod nazw\u0105 miasta \u2014 to dob\xF3r karty eksploracji.</p>
+      ${phase2}
+      <p class="note">Brak z\u0142ota na opcj\u0119 z karty = nie mo\u017Cesz jej wybra\u0107.</p>
+    </div>
+    ${locBlock}
+  `;
+  }
+  function nowDoingGuideHtml(player, { isSolo: isSolo2 = false } = {}) {
+    const loc = player?.locationId ? locById(player.locationId) : null;
+    const now = player?.nowDoing || "czekam";
+    if (now === "faza1") {
+      return `
+      <div class="guide-inline">
+        <p class="tip"><strong>Faza I:</strong> najpierw obowi\u0105zkowy ruch (albo od razu faza II). Po ruchu mo\u017Cesz zrobi\u0107 akcj\u0119 ze znaku na polu.</p>
+        ${loc ? locationActionGuideHtml(loc) : `<p class="warn">Brak lokacji \u2014 wr\xF3\u0107 do Graczy i wybierz szko\u0142\u0119 (start automatyczny).</p>`}
+      </div>`;
+    }
+    if (now === "poker") {
+      if (loc) {
+        return `<div class="guide-inline">${locationActionGuideHtml(loc, { heading: "Poker / akcja obszaru na tym polu" })}</div>`;
+      }
+      return `
+      <div class="guide-inline">
+        <div class="guide-box">
+          <p class="tip">Je\u015Bli pole ma ko\u015Bci \u2014 graj poker. Inaczej wykonaj znak obszaru (patrz panel lokacji).</p>
+        </div>
+      </div>`;
+    }
+    if (now === "eksploracja") {
+      return `<div class="guide-inline">${exploreGuideHtml(loc, isSolo2)}</div>`;
+    }
+    if (now === "walka") {
+      return `<div class="guide-inline"><p class="tip">Id\u017A do zak\u0142adki <strong>Tura \u2192 Faza II \u2192 Walka</strong> \u2014 tam jest rozpisane krok po kroku (tarcza \u2260 \u015Bmier\u0107).</p></div>`;
+    }
+    if (now === "medytacja") {
+      return `<div class="guide-inline"><p class="tip">Medytacja tylko przy atrybucie na <strong>V</strong> + wolne trofeum. Potem zwykle +reputacja i zm\u0119czenie.</p></div>`;
+    }
+    if (now === "faza3") {
+      return `<div class="guide-inline"><p class="tip">Faza III: odrzu\u0107 ile chcesz \u2192 dobierz do <strong>3</strong> \u2192 kup 1 z puli (p\u0142acisz odrzuceniem kart, nie z\u0142otem).</p></div>`;
+    }
+    return "";
+  }
+
+  // js/map/constants.js
+  var MAP_FLAG = {
+    yTop: 0.6,
+    w: 3.35,
+    h: 5.8,
+    notch: 0.85,
+    edgePad: 4.4,
+    woodX: 100,
+    woodW: 58.5,
+    get viewW() {
+      return this.woodX + this.woodW + 0.6;
+    },
+    get shellW() {
+      return this.woodX + this.woodW - 0.6;
+    }
+  };
+  var CARD_SLOT_WIDTH_FRAC = 0.7;
+
+  // js/map/wood-card-layout.js
+  var ACTION_DECK_SLOT_ID = "6";
+  function woodCardLayout() {
+    const { yTop, w: flagW, h: flagH, edgePad, woodX, woodW } = MAP_FLAG;
+    const tokenR = 2.2;
+    const colGap = 4.2;
+    const rightPad = 1.25;
+    const woodRight = woodX + woodW;
+    const leftSlotX = woodX + edgePad + flagW;
+    const slotWMax = (woodRight - rightPad - leftSlotX - colGap) / 2;
+    const slotW = slotWMax * CARD_SLOT_WIDTH_FRAC;
+    const slotInsetX = (slotWMax - slotW) / 2;
+    const leftSlotW = slotW;
+    const leftSlotXAdj = leftSlotX + slotInsetX;
+    const rightSlotX = leftSlotX + slotWMax + colGap + slotInsetX;
+    const rightSlotW = slotW;
+    const woodBottom = yTop + 83.8;
+    const rightTopStart = yTop + flagH - 1.15;
+    const bottomPad = edgePad;
+    const slotGap = 1.55;
+    const firstBreak = slotGap;
+    const rightCount = 7;
+    const rightAvail = woodBottom - bottomPad - rightTopStart;
+    const slotH = (rightAvail - (rightCount - 1) * slotGap) / rightCount;
+    return {
+      yTop,
+      flagW,
+      flagH,
+      edgePad,
+      woodX,
+      woodW,
+      woodRight,
+      tokenR,
+      rightPad,
+      leftSlotX: leftSlotXAdj,
+      leftSlotW,
+      rightSlotX,
+      rightSlotW,
+      slotWMax,
+      slotX: leftSlotXAdj,
+      slotW: leftSlotW,
+      slotH,
+      slotGap,
+      firstBreak,
+      rightTopStart,
+      woodBottom,
+      bottomPad,
+      rightCount
+    };
+  }
+  var LIP_INSET = 0.35;
+  function actionDeckSlotSvgRect() {
+    const L = woodCardLayout();
+    return {
+      x: L.rightSlotX,
+      y: L.rightTopStart,
+      w: L.rightSlotW,
+      h: L.slotH,
+      lipInset: LIP_INSET
+    };
+  }
+  function actionDeckLipSvgRect() {
+    const L = woodCardLayout();
+    return {
+      x: L.rightSlotX + LIP_INSET,
+      y: L.rightTopStart + LIP_INSET,
+      w: L.rightSlotW - 2 * LIP_INSET,
+      h: L.slotH - 2 * LIP_INSET
+    };
+  }
+
+  // js/map/shell-geometry.js
+  function bottomNotches() {
+    const { leftSlotX: lx, leftSlotW: lw, rightSlotX: rx, rightSlotW: rw } = woodCardLayout();
+    const depth = 1.45;
+    const angleDeg = 70;
+    const sideInset = depth / Math.tan(angleDeg * Math.PI / 180);
+    const make = (x, w) => ({
+      x0: x,
+      x1: x + w,
+      xt0: x + sideInset,
+      xt1: x + w - sideInset,
+      d: depth
+    });
+    return [make(lx, lw), make(rx, rw)];
+  }
+  function notchPathSeg(n, y1) {
+    return [`H${n.x1}`, `L${n.xt1} ${y1 - n.d}`, `H${n.xt0}`, `L${n.x0} ${y1}`].join(" ");
+  }
+  function boardShellPath() {
+    const x0 = 0.6;
+    const y0 = 0.6;
+    const x1 = x0 + MAP_FLAG.shellW;
+    const y1 = y0 + 83.8;
+    const [nL, nR] = bottomNotches();
+    return [`M${x0} ${y0}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x0}`, `Z`].join(
+      " "
+    );
+  }
+  function woodFacePath() {
+    const { woodX: x, yTop: y, woodW: w } = woodCardLayout();
+    const y1 = y + 83.8;
+    const x1 = x + w;
+    const [nL, nR] = bottomNotches();
+    return [`M${x} ${y}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x}`, `Z`].join(" ");
+  }
+
+  // js/map/svg-defs.js
+  function mapSvgDefsHtml(uid) {
+    return `
+          <defs>
+            <linearGradient id="${uid}-land" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8fa57a"/>
+              <stop offset="38%" stop-color="#c2b48a"/>
+              <stop offset="72%" stop-color="#9aaf7e"/>
+              <stop offset="100%" stop-color="#7e9470"/>
+            </linearGradient>
+            <radialGradient id="${uid}-mist" cx="50%" cy="42%" r="62%">
+              <stop offset="0%" stop-color="rgba(255,248,230,0.28)"/>
+              <stop offset="100%" stop-color="rgba(70,90,55,0.12)"/>
+            </radialGradient>
+            <radialGradient id="${uid}-water" cx="12%" cy="18%" r="28%">
+              <stop offset="0%" stop-color="rgba(70,120,150,0.28)"/>
+              <stop offset="100%" stop-color="rgba(70,120,150,0)"/>
+            </radialGradient>
+            <radialGradient id="${uid}-peak" cx="88%" cy="14%" r="24%">
+              <stop offset="0%" stop-color="rgba(210,215,220,0.35)"/>
+              <stop offset="100%" stop-color="rgba(210,215,220,0)"/>
+            </radialGradient>
+            <linearGradient id="${uid}-wood" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#6b4a2e"/>
+              <stop offset="35%" stop-color="#8a623c"/>
+              <stop offset="70%" stop-color="#734f30"/>
+              <stop offset="100%" stop-color="#5c3f28"/>
+            </linearGradient>
+            <linearGradient id="${uid}-wood-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgba(255,230,190,0.14)"/>
+              <stop offset="45%" stop-color="rgba(255,230,190,0)"/>
+              <stop offset="100%" stop-color="rgba(30,18,8,0.18)"/>
+            </linearGradient>
+            <clipPath id="${uid}-shell">
+              <path d="${boardShellPath()}"/>
+            </clipPath>
+          </defs>`;
+  }
+
+  // js/map/compose-stage.js
+  function mapWrapOpen({ setupFill = false, rot = 0 } = {}) {
+    return `
+      <div class="map-wrap${setupFill ? " map-wrap--setup-fill" : ""}" style="--map-rot:${rot}deg">
+        <div class="map-layer map-layer--svg" data-map-layer="svg">`;
+  }
+  function mapSvgOpen({ setupFill = false, uid = "m" } = {}) {
+    return `
+        <svg class="map-svg${setupFill ? " map-svg--setup-fill" : ""}" viewBox="-13 -12.5 ${MAP_FLAG.viewW + 13} 105.5"${setupFill ? ' preserveAspectRatio="xMidYMin meet"' : ""} role="img" aria-label="Mapa obszar\xF3w" data-map-layer="board">`;
+  }
+  function mapSvgClose() {
+    return `
+          <path class="map-board-outline" d="${boardShellPath()}" fill="none" stroke="#5a4530" stroke-width="0.55"/>
+        </svg>
+        </div>
+        <div class="map-layer map-layer--overlay" data-map-layer="overlay" aria-hidden="true"></div>
+      </div>`;
+  }
+  function mapStageOpen({ setupFill = false, hasPopup = false } = {}) {
+    return `
+    <div class="map-stage${hasPopup ? " map-stage--has-popup" : ""}${setupFill ? " map-stage--setup-fill" : ""}">`;
+  }
+  function mapStageClose({ popupHtml = null } = {}) {
+    return `
+      ${popupHtml ? `<div class="map-loc-popup" id="map-loc-popup" role="dialog" aria-live="polite">${popupHtml}</div>` : ""}
+    </div>`;
+  }
+
+  // js/map/layers/wood-panel.js
+  function woodCardPanelSvg(uid = "m") {
+    const { woodX: x, woodW: w, yTop: y } = woodCardLayout();
+    const h = 83.8;
+    const face = woodFacePath();
+    const notchD = bottomNotches()[0].d;
+    const plankH = h / 9;
+    const seams = Array.from({ length: 8 }, (_, i) => {
+      const yy = y + plankH * (i + 1);
+      if (yy > y + h - notchD - 0.3) return "";
+      return `<line class="map-wood-seam" x1="${x}" y1="${yy}" x2="${x + w}" y2="${yy}"/>`;
+    }).join("");
+    const grains = [0.12, 0.28, 0.47, 0.63].map(
+      (t, i) => `<path class="map-wood-grain" d="M${x + 1.2 + i * 0.15} ${y + h * t} Q${x + w * 0.45} ${y + h * t - 1.2}, ${x + w - 1.4} ${y + h * t + 0.6}" fill="none"/>`
+    ).join("");
+    return `
+    <g class="map-wood-panel" data-map-layer="wood" aria-label="St\xF3\u0142 na karty">
+      <path class="map-wood-face" d="${face}" fill="url(#${uid}-wood)"/>
+      <path d="${face}" fill="url(#${uid}-wood-shine)"/>
+      ${seams}
+      ${grains}
+      <line class="map-wood-join" x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/>
+    </g>`;
+  }
+
+  // js/map/slot-registry.js
+  var MAP_SLOT = {
+    ACTION_POOL: "action-pool",
+    ELIXIR: "elixir",
+    TROPHY: "trophy",
+    MONSTER_FIGHT: "monster-fight",
+    GOLD_BANK: "gold-bank",
+    DICE_TRAY: "dice-tray"
+  };
+  var MAP_SLOT_SELECTOR = Object.fromEntries(
+    Object.entries(MAP_SLOT).map(([k, v]) => [k, `[data-map-slot="${v}"]`])
+  );
+  function queryMapSlot(root, mapSlot) {
+    if (!root || !mapSlot) return null;
+    return root.querySelector(`[data-map-slot="${mapSlot}"]`);
+  }
+
+  // js/map/card-field-spec.js
+  function htmlCardFitVarsForLip(lipBox) {
+    const { unrotated } = cardFitInLipRect({
+      x: 0,
+      y: 0,
+      w: lipBox.width,
+      h: lipBox.height
+    });
+    return { fitRotW: unrotated.w, fitRotH: unrotated.h };
+  }
+  function mainDeckSeatScaleForPortraitInLip(lipBox, portraitW, portraitH) {
+    const { visual } = cardFitInLipRect({
+      x: 0,
+      y: 0,
+      w: lipBox.width,
+      h: lipBox.height
+    });
+    const rw = portraitH > 0 ? visual.w / portraitH : 1;
+    const rh = portraitW > 0 ? visual.h / portraitW : 1;
+    return Math.min(rw, rh);
+  }
+  function cardFitInLipRect(lip) {
+    const aspect = ACTION_CARD_ASPECT_W / ACTION_CARD_ASPECT_H;
+    let uw = lip.h;
+    let uh = uw / aspect;
+    if (uh > lip.w) {
+      uh = lip.w;
+      uw = uh * aspect;
+    }
+    const cx = lip.x + lip.w / 2;
+    const cy = lip.y + lip.h / 2;
+    return {
+      aspect,
+      unrotated: { w: uw, h: uh, x: cx - uw / 2, y: cy - uh / 2 },
+      visual: { w: uh, h: uw },
+      center: { cx, cy }
+    };
+  }
+  function rightColumnCardFieldSpec() {
+    const L = woodCardLayout();
+    const well = actionDeckSlotSvgRect();
+    const lip = actionDeckLipSvgRect();
+    const fit = cardFitInLipRect(lip);
+    return {
+      lipInset: LIP_INSET,
+      well,
+      lip,
+      fit,
+      column: {
+        x: L.rightSlotX,
+        wellW: L.rightSlotW,
+        wellH: L.slotH,
+        topY: L.rightTopStart,
+        gap: L.slotGap,
+        count: L.rightCount
+      }
+    };
+  }
+  function rightColumnSlotY(columnIndex) {
+    const { column } = rightColumnCardFieldSpec();
+    return column.topY + columnIndex * (column.wellH + column.gap);
+  }
+
+  // js/map/layers/card-slots.js
+  function lipRectFromWell(x, y, w, h) {
+    return {
+      x: x + LIP_INSET,
+      y: y + LIP_INSET,
+      w: w - 2 * LIP_INSET,
+      h: h - 2 * LIP_INSET
+    };
+  }
+  function cardImageInLipSvg(lipR, { className = "map-action-deck-card-svg" } = {}) {
+    const { unrotated, center } = cardFitInLipRect(lipR);
+    const href = `${COMMON_ACTION_DECK_BACK_SRC}?v=${COMMON_ACTION_DECK_ASSET_V}`;
+    return `
+        <g class="map-action-deck-card-layer" pointer-events="none">
+          <g transform="rotate(-90 ${center.cx} ${center.cy})">
+            <image class="${className}" href="${href}" x="${unrotated.x}" y="${unrotated.y}" width="${unrotated.w}" height="${unrotated.h}" preserveAspectRatio="xMidYMid meet"/>
+          </g>
+        </g>`;
+  }
+  function woodCardSlotsSvg() {
+    const {
+      yTop,
+      flagH,
+      tokenR,
+      leftSlotX,
+      leftSlotW,
+      rightSlotX,
+      rightSlotW,
+      slotH,
+      slotGap,
+      rightTopStart,
+      woodBottom,
+      bottomPad,
+      rightCount
+    } = woodCardLayout();
+    const topStart = yTop + flagH + 1.4;
+    const leftBottomH = 3 * slotH + 2 * slotGap;
+    const leftBottomStart = woodBottom - bottomPad - leftBottomH;
+    const diamondHtml = (x, y, w, h) => {
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const rw2 = Math.min(w * 0.22, h * 0.55);
+      const rh2 = Math.min(h * 0.38, w * 0.16);
+      return `<path class="map-card-diamond" d="M${cx} ${cy - rh2} L${cx + rw2} ${cy} L${cx} ${cy + rh2} L${cx - rw2} ${cy} Z"/>`;
+    };
+    const CARD_TOKEN_TERRAINS = ["forest", "water", "mountain"];
+    const fieldSpec = rightColumnCardFieldSpec();
+    const slotHtml = (i, x, y, w, h, withToken, withDiamond = false, terrain = null, mapSlot = null) => {
+      const token = withToken ? `<g class="map-token-slot" data-slot="card-token-${i}" data-terrain="${terrain || ""}" aria-label="\u017Beton obszaru \u2014 ${terrain === "forest" ? "Las" : terrain === "water" ? "Woda" : terrain === "mountain" ? "G\xF3ry" : "\u017Beton"}">
+          <circle class="map-token-slot-well" cx="${x + w}" cy="${y + h / 2}" r="${tokenR}"/>
+          <circle class="map-token-slot-lip" cx="${x + w}" cy="${y + h / 2}" r="${tokenR - 0.45}"/>
+        </g>` : "";
+      const deckMarker = withDiamond ? `<g class="map-card-deck-marker" aria-hidden="true">${diamondHtml(x, y, w, h)}</g>` : "";
+      const mapSlotAttr = mapSlot ? ` data-map-slot="${mapSlot}"` : "";
+      const lipClass = withDiamond ? "map-card-slot-lip map-action-deck-lip" : "map-card-slot-lip";
+      const lipR = lipRectFromWell(x, y, w, h);
+      const cardImg = withDiamond ? cardImageInLipSvg(lipR) : "";
+      const foHost = withDiamond ? `
+        <foreignObject class="map-action-deck-fo" x="${lipR.x}" y="${lipR.y}" width="${lipR.w}" height="${lipR.h}" overflow="visible">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="map-action-deck-fo-host" data-map-slot="action-pool-host"></div>
+        </foreignObject>` : "";
+      return `
+      <g class="map-card-slot${withDiamond ? " map-action-deck-slot" : ""} map-card-slot--right-col" data-slot="${i}"${mapSlotAttr}${withDiamond ? ` data-action-deck="pool"` : ""}${terrain ? ` data-terrain="${terrain}"` : ""} data-well-w="${w}" data-well-h="${h}" data-lip-w="${lipR.w}" data-lip-h="${lipR.h}">
+        <rect class="map-card-slot-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.5"/>
+        <rect class="${lipClass}" x="${lipR.x}" y="${lipR.y}" width="${lipR.w}" height="${lipR.h}" rx="0.3"/>
+        ${deckMarker}
+        ${cardImg}
+        ${foHost}
+        ${token}
+      </g>`;
+    };
+    const slots = [];
+    for (let i = 0; i < 3; i++) {
+      slots.push(
+        slotHtml(
+          i,
+          leftSlotX,
+          topStart + i * (slotH + slotGap),
+          leftSlotW,
+          slotH,
+          true,
+          false,
+          CARD_TOKEN_TERRAINS[i]
+        )
+      );
+    }
+    for (let i = 0; i < 3; i++) {
+      slots.push(slotHtml(3 + i, leftSlotX, leftBottomStart + i * (slotH + slotGap), leftSlotW, slotH, false));
+    }
+    const rw = fieldSpec.column.wellW;
+    const rh = fieldSpec.column.wellH;
+    for (let i = 0; i < rightCount; i++) {
+      const y = rightColumnSlotY(i);
+      slots.push(
+        slotHtml(
+          6 + i,
+          rightSlotX,
+          y,
+          rw,
+          rh,
+          false,
+          i === 0,
+          null,
+          i === 0 ? MAP_SLOT.ACTION_POOL : null
+        )
+      );
+    }
+    const [nL, nR] = bottomNotches();
+    const notchSlot = (id, label, notch, extraClass, mapSlot) => {
+      const w = notch.x1 - notch.x0;
+      const h = Math.max(slotH * 0.72, notch.d * 4.2);
+      const x = notch.x0;
+      const y = woodBottom - notch.d;
+      return `
+      <g class="map-card-slot ${extraClass}" data-slot="${id}" data-map-slot="${mapSlot}" aria-label="${label}">
+        <rect class="map-card-slot-well ${extraClass}-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.45"/>
+        <rect class="map-card-slot-lip" x="${x + 0.3}" y="${y + 0.3}" width="${w - 0.6}" height="${h - 0.6}" rx="0.3"/>
+      </g>`;
+    };
+    slots.push(notchSlot("elixir", "Talia eliksir\xF3w", nR, "map-elixir-slot", MAP_SLOT.ELIXIR));
+    slots.push(notchSlot("trophy", "Trofea atrybut\xF3w", nL, "map-trophy-slot", MAP_SLOT.TROPHY));
+    return `<g class="map-card-slots" data-map-layer="card-slots" aria-label="Pola na karty">${slots.join("")}</g>`;
+  }
+
+  // js/map/layers/round-flags.js
+  function monsterFlagLayout() {
+    const { edgePad, woodX, w: flagW } = MAP_FLAG;
+    const { slotX, slotW } = woodCardLayout();
+    return [
+      { roman: "I", level: 1, x: edgePad },
+      { roman: "II", level: 2, x: woodX + edgePad },
+      { roman: "III", level: 3, x: slotX + slotW }
+    ].map((f) => ({ ...f, cx: f.x + flagW / 2 }));
+  }
+  function roundFlagSvg(board = null) {
+    const active = String(board?.roundFlag || board?.pendingMonsterLevel || "I").toUpperCase();
+    const activeRoman = active === "III" || active === "3" ? "III" : active === "II" || active === "2" ? "II" : "I";
+    const flags = monsterFlagLayout();
+    const { yTop, w, h, notch } = MAP_FLAG;
+    const cloth = (roman, x) => `
+    <g class="map-round-flag${roman === activeRoman ? " map-round-flag--active" : ""}" transform="translate(${x}, ${yTop})" aria-label="Poziom ${roman}">
+      <path class="map-round-flag-cloth" d="M0,0 L${w},0 L${w},${h - notch} L${w / 2},${h} L0,${h - notch} Z"/>
+      <text class="map-round-flag-num" x="${w / 2}" y="${h * 0.52}" text-anchor="middle" dominant-baseline="middle">${roman}</text>
+    </g>`;
+    return `<g class="map-round-flags" data-map-layer="round-flags">${flags.map((f) => cloth(f.roman, f.x)).join("")}</g>`;
+  }
+
+  // js/map/layers/monster-stacks.js
+  function hexagonPath(cx, cy, r) {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 180 * (60 * i - 30);
+      pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
+    }
+    return `M${pts.join(" L")} Z`;
+  }
+  function monsterLevelStacksSvg() {
+    const { yTop, w: flagW } = MAP_FLAG;
+    const { slotH } = woodCardLayout();
+    const cardW = Math.max(flagW * 1.85, 5.8);
+    const cardH = Math.max(slotH * 1.05, 7.2);
+    const tokenR = { 1: 2.05, 2: 2.55, 3: 3.15 };
+    const stacks = monsterFlagLayout().map((f) => {
+      const cardX = f.cx - cardW / 2;
+      const cardY = yTop - cardH - 0.35;
+      const tokenCx = f.cx + cardW / 2 + tokenR[f.level] + 0.85;
+      const tokenCy = cardY + cardH * 0.55;
+      return `
+      <g class="map-monster-stack" data-monster-level="${f.level}" data-slot="monster-${f.level}" aria-label="Potwory ${f.roman}">
+        <g class="map-card-slot map-monster-card-slot" data-slot="monster-card-${f.level}">
+          <rect class="map-card-slot-well map-monster-card-well" x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="0.45"/>
+          <rect class="map-card-slot-lip" x="${cardX + 0.28}" y="${cardY + 0.28}" width="${cardW - 0.56}" height="${cardH - 0.56}" rx="0.3"/>
+          <text class="map-monster-card-lvl" x="${f.cx}" y="${cardY + cardH * 0.52}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
+        </g>
+        <g class="map-monster-token" data-slot="monster-token-${f.level}" data-token-level="${f.level}">
+          <path class="map-monster-token-well" d="${hexagonPath(tokenCx, tokenCy, tokenR[f.level])}"/>
+          <text class="map-monster-token-num" x="${tokenCx}" y="${tokenCy + 0.15}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
+        </g>
+      </g>`;
+    });
+    return `<g class="map-monster-stacks" data-map-layer="monster-stacks" aria-label="Stosy potwor\xF3w I\u2013III">${stacks.join("")}</g>`;
+  }
+
+  // js/map/layers/location-fight.js
+  function locationTokensAndFightDeckSvg() {
+    const { yTop, woodX } = MAP_FLAG;
+    const fightW = 7.6;
+    const fightH = 10.6;
+    const mapGap = 0.2;
+    const rightPad = 0.35;
+    const fightX = woodX - fightW - rightPad;
+    const fightY = yTop - fightH - mapGap;
+    const r = 3.15;
+    const img = 4.5;
+    const tokenGap = 7.05;
+    const tokenRight = fightX - 0.85 - r;
+    const terrains = [
+      { id: "forest", label: "Las", file: "forest" },
+      { id: "mountain", label: "G\xF3ry", file: "mountain" },
+      { id: "water", label: "Woda", file: "water" }
+    ].map((t, i, arr) => ({
+      ...t,
+      x: tokenRight - (arr.length - 1 - i) * tokenGap
+    }));
+    const cy = yTop - r - mapGap;
+    const tokens = terrains.map(
+      (t) => `
+      <g class="map-loc-token-stack" data-slot="loc-token-${t.id}" data-terrain="${t.id}" aria-label="\u017Betony obszar\xF3w \u2014 ${t.label}">
+        <circle class="map-loc-token-well" cx="${t.x}" cy="${cy}" r="${r}" fill="none"/>
+        <image href="./img/terrain/${t.file}.png" x="${t.x - img / 2}" y="${cy - img / 2}" width="${img}" height="${img}" preserveAspectRatio="xMidYMid meet"/>
+      </g>`
+    ).join("");
+    const fight = `
+    <g class="map-card-slot map-fight-deck-slot" data-slot="monster-fight" data-map-slot="${MAP_SLOT.MONSTER_FIGHT}" aria-label="Talia walki potwor\xF3w">
+      <rect class="map-card-slot-well map-fight-deck-well" x="${fightX}" y="${fightY}" width="${fightW}" height="${fightH}" rx="0.5"/>
+      <rect class="map-card-slot-lip" x="${fightX + 0.3}" y="${fightY + 0.3}" width="${fightW - 0.6}" height="${fightH - 0.6}" rx="0.35"/>
+      <text class="map-fight-deck-label" x="${fightX + fightW / 2}" y="${fightY + fightH * 0.52}" text-anchor="middle" dominant-baseline="middle">\u2694</text>
+    </g>`;
+    return `<g class="map-loc-fight-setup" data-map-layer="loc-fight" aria-label="\u017Betony obszar\xF3w i talia walki">${tokens}${fight}</g>`;
+  }
+
+  // js/map/layers/gold-dice.js
+  function goldBankAndDiceSvg() {
+    const { yTop } = woodCardLayout();
+    const cx = -6.2;
+    const dieSize = 2.85;
+    const dieGap = 0.38;
+    const step = dieSize + dieGap;
+    const diceY0 = yTop + 1.15;
+    const diceCells = [
+      [-1, 0],
+      [0, 0],
+      [1, 0],
+      [-0.5, 1],
+      [0.5, 1]
+    ];
+    const pip = (x, y) => `<circle class="map-die-pip" cx="${x}" cy="${y}" r="0.26"/>`;
+    const pipLayouts = [
+      [[0.5, 0.5]],
+      [
+        [0.28, 0.28],
+        [0.72, 0.72]
+      ],
+      [
+        [0.28, 0.28],
+        [0.5, 0.5],
+        [0.72, 0.72]
+      ],
+      [
+        [0.28, 0.28],
+        [0.72, 0.28],
+        [0.28, 0.72],
+        [0.72, 0.72]
+      ],
+      [
+        [0.28, 0.28],
+        [0.72, 0.28],
+        [0.5, 0.5],
+        [0.28, 0.72],
+        [0.72, 0.72]
+      ]
+    ];
+    const dice = diceCells.map(([gx, gy], i) => {
+      const x = cx + gx * step - dieSize / 2;
+      const y = diceY0 + gy * step;
+      const pips = pipLayouts[i].map(([px, py]) => pip(x + dieSize * px, y + dieSize * py)).join("");
+      return `
+      <g class="map-die-slot" data-slot="die-${i}" data-die="${i}">
+        <rect class="map-die-well" x="${x}" y="${y}" width="${dieSize}" height="${dieSize}" rx="0.45"/>
+        ${pips}
+      </g>`;
+    }).join("");
+    const goldR = 2.05;
+    const goldCy = diceY0 + 2 * step + goldR + 1.35;
+    const goldOffsets = [
+      [-1.55, -0.55],
+      [1.35, -0.75],
+      [-0.15, 0.95],
+      [1.65, 0.85],
+      [-1.7, 1.15]
+    ];
+    const golds = goldOffsets.map(
+      ([dx, dy], i) => `
+      <g class="map-gold-coin" data-gold="${i}" transform="translate(${cx + dx}, ${goldCy + dy})">
+        <circle class="map-gold-coin-outer" r="${goldR}"/>
+        <circle class="map-gold-coin-inner" r="${goldR * 0.58}"/>
+        <text class="map-gold-coin-mark" text-anchor="middle" dominant-baseline="middle">z\u0142</text>
+      </g>`
+    ).join("");
+    return `
+    <g class="map-gold-dice-setup" data-map-layer="gold-dice" aria-label="Bank z\u0142ota i ko\u015Bci">
+      <g class="map-dice-tray" data-slot="dice-tray" data-map-slot="${MAP_SLOT.DICE_TRAY}" aria-label="Ko\u015Bci do gry">${dice}</g>
+      <g class="map-gold-bank" data-slot="gold-bank" data-map-slot="${MAP_SLOT.GOLD_BANK}" aria-label="Bank z\u0142ota">${golds}</g>
+    </g>`;
+  }
+
+  // js/board.js
+  var NOW_ACTIONS = [
+    { id: "czekam", label: "Czeka" },
+    { id: "faza1", label: "Faza I \u2014 ruch" },
+    { id: "poker", label: "Poker / akcja obszaru" },
+    { id: "walka", label: "Walka" },
+    { id: "medytacja", label: "Medytacja" },
+    { id: "eksploracja", label: "Eksploracja" },
+    { id: "faza3", label: "Faza III \u2014 dob\xF3r/kupno" }
+  ];
+  function defaultBoard() {
+    return {
+      rotation: 0,
+      tool: "select",
+      selectedLoc: null,
+      placePlayer: 0,
+      /** locId → { count, label?, level? } */
+      monsters: {},
+      /** { playerIdx, fromId, toId, costId? } — komunikat po przesunięciu pionka */
+      movePrompt: null,
+      /** Podświetl sąsiadów z tej lokacji (ruch) */
+      highlightFrom: null,
+      /** Poziom ustawiany przyciskiem I/II/III przed oznaczeniem */
+      pendingMonsterLevel: "I",
+      /** Komunikat gdy kliknięcie nie może postawić potwora (ten sam teren itd.) */
+      placeError: null,
+      /** schoolId ostatniego gracza, który zdobył dany poziom reputacji (0–4) */
+      repClaim: [null, null, null, null, null],
+      /** Flaga poziomu na mapie (I / II / III) */
+      roundFlag: "I"
+    };
+  }
+  function noteReputationClaim(board, schoolId, level) {
+    if (!board) return;
+    if (!Array.isArray(board.repClaim) || board.repClaim.length !== 5) {
+      board.repClaim = [null, null, null, null, null];
+    }
+    const n = Math.min(4, Math.max(0, Math.round(Number(level) || 0)));
+    board.repClaim[n] = schoolId || null;
+  }
+  function ensureReputationClaims(board, roster = []) {
+    if (!board) return false;
+    if (!Array.isArray(board.repClaim) || board.repClaim.length !== 5) {
+      board.repClaim = [null, null, null, null, null];
+    }
+    const byRep = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+    for (const p of roster || []) {
+      if (!p) continue;
+      const r = Math.min(4, Math.max(0, Math.round(Number(p.reputation) || 0)));
+      byRep[r].push(p.schoolId || "wilk");
+    }
+    let changed = false;
+    for (let n = 0; n <= 4; n++) {
+      const present = byRep[n];
+      if (!present.length) continue;
+      const cur = board.repClaim[n];
+      const needFresh = n === 0 ? !cur || !present.includes(cur) : !cur;
+      if (needFresh) {
+        board.repClaim[n] = present[Math.floor(Math.random() * present.length)];
+        changed = true;
+      }
+    }
+    return changed;
+  }
+  function monsterAt(board, locId) {
+    const m = board?.monsters?.[locId];
+    if (!m || !(m.count > 0)) return null;
+    return m;
+  }
+  function monstersList(board) {
+    return Object.entries(board?.monsters || {}).filter(([, m]) => m && m.count > 0).map(([id, m]) => ({ id, loc: locById(id), ...m })).filter((row) => row.loc);
+  }
+  var MONSTER_TERRAINS = ["forest", "mountain", "water"];
+  function locationsForTerrain(terrain) {
+    return LOCATIONS.filter(
+      (l) => l.terrain === terrain && typeof l.number === "number" && l.number !== 0 && l.id !== "behelt-nar"
+    ).sort((a, b) => a.number - b.number);
+  }
+  function monsterOccupyingTerrain(board, terrain, exceptLocId = null) {
+    if (!terrain || !MONSTER_TERRAINS.includes(terrain)) return null;
+    for (const row of monstersList(board)) {
+      if (exceptLocId && row.id === exceptLocId) continue;
+      if (row.loc.terrain === terrain) return row;
+    }
+    return null;
+  }
+  function setMonsterForTerrain(board, terrain, locId, { level } = {}) {
+    if (!MONSTER_TERRAINS.includes(terrain)) {
+      return { ok: false, reason: "Nieznany teren." };
+    }
+    for (const row of monstersList(board)) {
+      if (row.loc.terrain === terrain) delete board.monsters[row.id];
+    }
+    if (!locId) {
+      board.placeError = null;
+      return { ok: true, cleared: true };
+    }
+    const loc = locById(locId);
+    if (!loc) return { ok: false, reason: "Nieznana lokacja." };
+    if (loc.terrain !== terrain) {
+      return {
+        ok: false,
+        reason: `Lokacja ${loc.name} to ${TERRAIN[loc.terrain]?.label || loc.terrain}, nie ${TERRAIN[terrain]?.label || terrain}.`
+      };
+    }
+    if (loc.number === 0 || loc.id === "behelt-nar") {
+      return {
+        ok: false,
+        reason: "Behelt Nar (0) nie ma \u017Cetonu obszaru \u2014 tu nie stawia si\u0119 potwor\xF3w."
+      };
+    }
+    const lv = level || "I";
+    board.monsters[locId] = { count: 1, level: lv, label: `Poz. ${lv}` };
+    board.placeError = null;
+    board.selectedLoc = locId;
+    return { ok: true, placed: true, level: lv, loc };
+  }
+  function cycleMonsterTerrain(board, terrain, delta) {
+    const opts = locationsForTerrain(terrain);
+    if (!opts.length) return { ok: false, reason: "Brak lokacji." };
+    const cur = monsterOccupyingTerrain(board, terrain);
+    let idx = cur ? opts.findIndex((l) => l.id === cur.id) : -1;
+    if (idx < 0) idx = delta > 0 ? -1 : 0;
+    const next = opts[(idx + delta + opts.length) % opts.length];
+    const level = cur?.level || "I";
+    return setMonsterForTerrain(board, terrain, next.id, { level });
+  }
+  function setMonsterTerrainByNumber(board, terrain, number, { level } = {}) {
+    const n = Number(number);
+    if (!Number.isFinite(n)) return { ok: false, reason: "Podaj numer obszaru." };
+    const loc = locationsForTerrain(terrain).find((l) => l.number === n);
+    if (!loc) {
+      const nums = locationsForTerrain(terrain).map((l) => l.number).join(", ");
+      return {
+        ok: false,
+        reason: `Numer ${n} nie nale\u017Cy do terenu \u201E${TERRAIN[terrain]?.label || terrain}\u201D. Dost\u0119pne: ${nums}.`
+      };
+    }
+    const cur = monsterOccupyingTerrain(board, terrain);
+    return setMonsterForTerrain(board, terrain, loc.id, {
+      level: level || cur?.level || "I"
+    });
+  }
+  function setMonsterTerrainLevel(board, terrain, level) {
+    const cur = monsterOccupyingTerrain(board, terrain);
+    if (!cur) {
+      return { ok: false, reason: "Najpierw wybierz numer obszaru dla tego terenu." };
+    }
+    board.monsters[cur.id] = {
+      count: 1,
+      level,
+      label: `Poz. ${level}`
+    };
+    board.placeError = null;
+    return { ok: true };
+  }
+  function sanitizeMonstersUniqueTerrain(board) {
+    if (!board?.monsters) return board;
+    const seen = /* @__PURE__ */ Object.create(null);
+    for (const id of Object.keys(board.monsters)) {
+      const m = board.monsters[id];
+      if (!m || !(m.count > 0)) {
+        delete board.monsters[id];
+        continue;
+      }
+      const loc = locById(id);
+      if (!loc || !MONSTER_TERRAINS.includes(loc.terrain) || loc.number === 0 || loc.id === "behelt-nar") {
+        delete board.monsters[id];
+        continue;
+      }
+      m.count = 1;
+      if (seen[loc.terrain]) {
+        delete board.monsters[id];
+        continue;
+      }
+      seen[loc.terrain] = id;
+    }
+    return board;
+  }
+  function monsterEncounterHtml(loc, monster) {
+    if (!loc || !monster) return "";
+    const lvl = monster.level ? ` poziom ${escapeHtml2(String(monster.level))}` : "";
+    const label = monster.label ? ` \u2014 ${escapeHtml2(monster.label)}` : "";
+    return `
+    <div class="guide-box guide-monster-hit" role="status">
+      <p class="step-kicker" style="margin:0">${ICO.monster()} Potw\xF3r na polu</p>
+      <h3 style="margin:0.25rem 0 0.4rem">Na <strong>${escapeHtml2(loc.name)}</strong> stoi potw\xF3r${lvl}${label}</h3>
+      <p class="lead" style="margin:0"><strong>Nie musisz walczy\u0107.</strong> Instrukcja: w fazie II <em>mo\u017Cesz</em> walczy\u0107 z potworem na tym samym obszarze \u2014 albo wybra\u0107 medytacj\u0119 albo eksploracj\u0119.</p>
+      <p class="note" style="margin:0.45rem 0 0">Teraz jeste\u015B w fazie I: akcje obszaru / zadanie / kolejny ruch. Walka dopiero gdy w fazie II wybierzesz \u201EWalka\u201D.</p>
+    </div>
+  `;
+  }
+  var LEVEL_ORDER = ["I", "II", "III"];
+  function normalizeMonsterLevel(level) {
+    const s = String(level || "I").toUpperCase();
+    if (s === "1" || s === "I") return "I";
+    if (s === "2" || s === "II") return "II";
+    if (s === "3" || s === "III") return "III";
+    return LEVEL_ORDER.includes(s) ? s : "I";
+  }
+  function nextMonsterLevelAfterDefeat(level) {
+    const lv = normalizeMonsterLevel(level);
+    if (lv === "I") return "II";
+    return "III";
+  }
+  function monsterFightOutcomePlan({ kind, isSolo: isSolo2, loc, monster }) {
+    const level = normalizeMonsterLevel(monster?.level);
+    const terrain = loc?.terrain || null;
+    const terrainLabel = terrain ? TERRAIN[terrain]?.label || terrain : "?";
+    const locName = loc?.name || "?";
+    if (kind === "loss") {
+      return {
+        kind,
+        removeMonster: false,
+        needsSpawn: false,
+        spawnLevel: null,
+        terrain,
+        terrainLabel,
+        oldLevel: level,
+        title: "Kl\u0119ska",
+        summary: `Potw\xF3r zostaje na <strong>${escapeHtml2(locName)}</strong> (poz. ${escapeHtml2(
+          level
+        )}). Przy nast\u0119pnej walce ma pe\u0142n\u0105 tali\u0119. We\u017A trop terenu \u201E${escapeHtml2(
+          terrainLabel
+        )}\u201D (je\u015Bli go nie masz) i 1 kart\u0119 kosztu 0 na odrzucone; w tej turze w fazie III dobierasz o 1 mniej.`,
+        spawnHint: null
+      };
+    }
+    if (kind === "drive") {
+      return {
+        kind,
+        removeMonster: true,
+        needsSpawn: true,
+        spawnLevel: level,
+        terrain,
+        terrainLabel,
+        oldLevel: level,
+        title: "Odp\u0119dzenie",
+        summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(locName)}</strong>. +2 z\u0142ota; \u017Ceton na stos odp\u0119dzonych; 1 karta kosztu 0 na odrzucone.`,
+        spawnHint: `Nowy potw\xF3r: <strong>poziom ${escapeHtml2(
+          level
+        )}</strong> (ten sam), teren <strong>${escapeHtml2(
+          terrainLabel
+        )}</strong> \u2014 dobierz \u017Ceton obszaru tego terenu i wpisz jego numer poni\u017Cej.`
+      };
+    }
+    if (isSolo2) {
+      return {
+        kind,
+        removeMonster: true,
+        needsSpawn: false,
+        spawnLevel: null,
+        terrain,
+        terrainLabel,
+        oldLevel: level,
+        title: "Pokonanie (solo)",
+        summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(
+          locName
+        )}</strong>. +2 z\u0142ota, trofeum, +reputacja, zm\u0119czenie. <strong>Solo: nie dobierasz nowego potwora</strong> po pokonaniu.`,
+        spawnHint: null
+      };
+    }
+    const nextLv = nextMonsterLevelAfterDefeat(level);
+    return {
+      kind,
+      removeMonster: true,
+      needsSpawn: true,
+      spawnLevel: nextLv,
+      terrain,
+      terrainLabel,
+      oldLevel: level,
+      title: "Pokonanie",
+      summary: `Zdejmij \u017Ceton z <strong>${escapeHtml2(
+        locName
+      )}</strong>. +2 z\u0142ota, trofeum, +reputacja, zm\u0119czenie.`,
+      spawnHint: `Nowy potw\xF3r: <strong>poziom ${escapeHtml2(
+        nextLv
+      )}</strong> (${escapeHtml2(level)}\u2192${escapeHtml2(
+        nextLv
+      )}), teren <strong>${escapeHtml2(
+        terrainLabel
+      )}</strong> \u2014 dobierz \u017Ceton obszaru tego samego terenu i wpisz numer poni\u017Cej.`
+    };
+  }
+  function monsterSpawnSlotHtml(board, { terrain, level }) {
+    if (!terrain || !MONSTER_TERRAINS.includes(terrain)) return "";
+    const t = TERRAIN[terrain];
+    const opts = locationsForTerrain(terrain);
+    const cur = monsterOccupyingTerrain(board, terrain);
+    const num = cur?.loc?.number;
+    const name = cur?.loc?.name || "\u2014 ustaw numer z \u017Cetonu \u2014";
+    const lv = normalizeMonsterLevel(level || cur?.level || "I");
+    return `
+    <div class="monster-terrain-slot is-filled monster-spawn-slot" data-terrain-slot="${terrain}">
+      <div class="monster-terrain-head">
+        <span class="monster-terrain-ico">${terrainIcon(terrain)}</span>
+        <strong>${escapeHtml2(t.label)}</strong>
+        <span class="monster-terrain-meta">${escapeHtml2(name)} \xB7 poz. ${escapeHtml2(lv)}</span>
+      </div>
+      <div class="monster-terrain-pick" role="group" aria-label="Numer nowego obszaru">
+        <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="-1" title="Poprzedni">\u25C0</button>
+        <input type="number" class="monster-num-input" data-monster-num="${terrain}" min="0" max="18" inputmode="numeric" value="${num != null ? escapeHtml2(String(num)) : ""}" placeholder="#" aria-label="Numer obszaru" />
+        <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="1" title="Nast\u0119pny">\u25B6</button>
+      </div>
+      <p class="note monster-terrain-hint">Poziom ustawiony na <strong>${escapeHtml2(
+      lv
+    )}</strong> \xB7 numery: ${opts.map((l) => l.number).join(", ")}</p>
+    </div>
+  `;
+  }
+  function monstersPanelHtml(board) {
+    const levels = ["I", "II", "III"];
+    const slots = MONSTER_TERRAINS.map((terrain) => {
+      const t = TERRAIN[terrain];
+      const opts = locationsForTerrain(terrain);
+      const cur = monsterOccupyingTerrain(board, terrain);
+      const num = cur?.loc?.number;
+      const name = cur?.loc?.name || "\u2014 wybierz numer \u2014";
+      const level = cur?.level || "I";
+      const filled = Boolean(cur);
+      return `
+      <div class="monster-terrain-slot ${filled ? "is-filled" : "is-empty"}" data-terrain-slot="${terrain}">
+        <div class="monster-terrain-head">
+          <span class="monster-terrain-ico">${terrainIcon(terrain)}</span>
+          <strong>${escapeHtml2(t.label)}</strong>
+          <span class="monster-terrain-meta">${filled ? escapeHtml2(name) : "brak \u017Cetonu"}</span>
+        </div>
+        <div class="monster-terrain-pick" role="group" aria-label="Numer obszaru: ${escapeHtml2(t.label)}">
+          <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="-1" title="Poprzedni obszar">\u25C0</button>
+          <input type="number" class="monster-num-input" data-monster-num="${terrain}" min="0" max="18" inputmode="numeric" value="${num != null ? escapeHtml2(String(num)) : ""}" placeholder="#" aria-label="Numer obszaru ${escapeHtml2(t.label)}" />
+          <button type="button" class="btn btn-secondary monster-num-btn" data-monster-cycle="${terrain}" data-delta="1" title="Nast\u0119pny obszar">\u25B6</button>
+          <button type="button" class="btn btn-secondary" data-monster-terrain-clear="${terrain}" ${filled ? "" : "disabled"}>Usu\u0144</button>
+        </div>
+        <div class="monster-terrain-levels" role="group" aria-label="Poziom potwora ${escapeHtml2(t.label)}">
+          ${levels.map(
+        (lv) => `<button type="button" class="btn ${filled && level === lv ? "btn-primary" : "btn-secondary"}" data-monster-terrain-level="${terrain}" data-level="${lv}" ${filled ? "" : "disabled"}>Poz. ${lv}</button>`
+      ).join("")}
+        </div>
+        <p class="note monster-terrain-hint">Numery ${opts.map((l) => l.number).join(", ")}</p>
+      </div>`;
+    }).join("");
+    return `
+    <div class="monsters-panel">
+      <h3>${ICO.monster()} Potwory na mapie</h3>
+      <p class="lead" style="margin:0">Trzy \u017Cetony obszar\xF3w = <strong>3 r\xF3\u017Cne tereny</strong>. Podaj <strong>numer</strong> z \u017Cetonu (strza\u0142ki albo wpisz) \u2014 drugi potw\xF3r na ten sam teren jest niemo\u017Cliwy. Szko\u0142a (np. Kaer Seren) jest OK, je\u015Bli tak wysz\u0142o na \u017Cetonie; <strong>Behelt Nar (0)</strong> nie ma \u017Cetonu.</p>
+      ${board.placeError ? `<p class="warn" style="margin:0.45rem 0 0" role="alert">${escapeHtml2(board.placeError)}</p>` : ""}
+      <div class="monster-terrain-grid">${slots}</div>
+      <p class="note" style="margin:0.45rem 0 0">Walka w fazie II jest <strong>opcjonalna</strong> \u2014 tylko gdy \u017Ceton stoi na Twoim polu.</p>
+    </div>
+  `;
+  }
+  function ensurePlayerTrack(p, startCards = 5, startGold = 3) {
+    if (typeof p.reputation !== "number") p.reputation = 0;
+    if (typeof p.cards !== "number") p.cards = startCards;
+    if (typeof p.gold !== "number") p.gold = startGold;
+    if (!p.locationId) p.locationId = null;
+    if (!p.nowDoing) p.nowDoing = "czekam";
+    if (typeof p.elixirs !== "number") p.elixirs = 0;
+    if (!Array.isArray(p.quests)) p.quests = [];
+    if (!p.attrs || typeof p.attrs !== "object") {
+      p.attrs = { attack: 1, defense: 1, alchemy: 1, specialty: 1, level: 1 };
+    }
+    if (typeof p.shield !== "number") p.shield = p.attrs.defense || 1;
+    if (!Array.isArray(p.attrTrophies)) p.attrTrophies = [];
+    if (!p.trails || typeof p.trails !== "object") {
+      p.trails = { forest: null, mountain: null, water: null };
+    }
+    if (typeof p.resourcesApplied !== "boolean") p.resourcesApplied = false;
+    return p;
+  }
+  function handAfterFatigue(cards, rep) {
+    const lose = fatigueForReputation(rep);
+    const after = Math.max(0, cards - lose);
+    return { lose, after, before: cards };
+  }
+  function phase3DrawHint(cardsInHand) {
+    const phase3Target = 3;
+    const hardLimit = 7;
+    const afterDiscardAssume = Math.min(cardsInHand, phase3Target);
+    const need = Math.max(0, phase3Target - afterDiscardAssume);
+    return {
+      limit: hardLimit,
+      phase3Target,
+      drawUpTo: need,
+      afterDraw: phase3Target,
+      note: cardsInHand > phase3Target ? `Masz ${cardsInHand} \u2192 w fazie III zwykle odrzucasz (dowoln\u0105 liczb\u0119), potem dobierasz do 3, potem kupujesz 1 (limit r\u0119ki nadal 7).` : cardsInHand < phase3Target ? `Dobierz do 3: +${need} kart(y), potem kup 1 z puli (limit r\u0119ki 7).` : "Masz 3 \u2014 w fazie III mo\u017Cesz odrzuci\u0107 cz\u0119\u015B\u0107 i dobra\u0107 z powrotem do 3, potem kup 1."
+    };
+  }
+  function escapeXml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function mapSvgHtml(board, roster, {
+    schoolById: schoolById4,
+    highlightFromId,
+    showDisclaimer = false,
+    popupHtml = null,
+    setupCoachPhase = null,
+    setupPreview = false,
+    setupMapPawns = false
+  } = {}) {
+    const setupLite = (setupPreview || setupCoachPhase != null) && !setupMapPawns;
+    const setupFill = setupPreview || setupMapPawns || setupCoachPhase != null;
+    const locMap = Object.fromEntries(LOCATIONS.map((l) => [l.id, l]));
+    const fromId = highlightFromId || board.highlightFrom || null;
+    const reachable = new Set(fromId ? neighborsOf(fromId) : []);
+    const roadSeg = ([a, b], cls) => {
+      const A = locMap[a];
+      const B = locMap[b];
+      if (!A || !B) return "";
+      const lit = fromId && (a === fromId && reachable.has(b) || b === fromId && reachable.has(a));
+      return `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="${cls}${lit ? " map-road-lit" : ""}" />`;
+    };
+    const roadsUnder = ROADS.map((pair) => roadSeg(pair, "map-road-under")).join("");
+    const roads = ROADS.map((pair) => roadSeg(pair, "map-road")).join("");
+    const rot = board.rotation || 0;
+    const labelUpright = -rot;
+    const uid = `m${Math.random().toString(36).slice(2, 9)}`;
+    const nodes = LOCATIONS.map((loc) => {
+      const t = TERRAIN[loc.terrain] || TERRAIN.forest;
+      const fill = t.color;
+      const selected = board.selectedLoc === loc.id ? " map-node-selected" : "";
+      const here = fromId === loc.id ? " map-node-here" : "";
+      const reach = reachable.has(loc.id) ? " map-node-reach" : "";
+      const terrainClass = ` map-node--${loc.terrain || "forest"}`;
+      const monsters = board.monsters[loc.id];
+      const witches = roster.map((p, i) => ({ p, i })).filter(({ p }) => p.locationId === loc.id);
+      const numLabel = typeof loc.number === "number" ? String(loc.number) : "";
+      const name = String(loc.name || "");
+      const nameLen = name.length;
+      const fontPx = nameLen >= 12 ? 1.55 : nameLen >= 9 ? 1.75 : 1.95;
+      const sidePad = 2.4;
+      const labelW = Math.min(30, Math.max(9.5, nameLen * fontPx * 0.62 + sidePad * 2));
+      const labelH = 2.85;
+      const labelX = -labelW / 2;
+      const labelY = -labelH / 2;
+      const clipId = `${uid}-lbl-${loc.id}`;
+      const clipPad = 0.55;
+      const isWild = loc.terrain === "wild" || loc.id === "behelt-nar";
+      const monsterBadge = monsters ? `<g class="map-monster-badge" transform="translate(${loc.x + 3.4},${loc.y - 4}) rotate(${labelUpright})">
+           <circle r="2.15" fill="#6b3a2f" stroke="#f0e6d2" stroke-width="0.35"/>
+           <text y="0.85" text-anchor="middle" class="map-badge-text">${escapeXml(String(monsters.count || 1))}</text>
+         </g>` : "";
+      const setupSchoolPawns = setupMapPawns && loc.school ? (roster || []).map((p, i) => ({ p, i })).filter(({ p }) => schoolStartId(p.schoolId) === loc.id).map(({ p, i }, idx) => {
+        const sid = p.schoolId || "wilk";
+        const ox = -2.6 + idx * 2.4;
+        const src = `${schoolRepTokenSrc(sid)}?v=${MAP_PREP_PAWN_ASSET_V}`;
+        return `<g class="map-setup-school-pawn" transform="translate(${loc.x + ox},${loc.y + 3.6})">
+            <circle r="2.05" fill="rgba(20,18,14,0.35)" stroke="#d4b05a" stroke-width="0.35"/>
+            <image class="map-setup-school-pawn__art" href="${src}" x="-1.85" y="-1.85" width="3.7" height="3.7" preserveAspectRatio="xMidYMid meet"/>
+            <text y="3.35" text-anchor="middle" class="map-badge-text map-setup-school-pawn__lbl">${escapeXml(String(i + 1))}</text>
+          </g>`;
+      }).join("") : "";
+      const witchBadges = setupSchoolPawns ? setupSchoolPawns : setupLite || loc.school ? "" : witches.map(({ i }, idx) => {
+        const ox = -3.2 + idx * 2.4;
+        return `<g transform="translate(${loc.x + ox},${loc.y + 4.4}) rotate(${labelUpright})">
+          <circle r="1.7" fill="#244833" stroke="#d4b05a" stroke-width="0.35"/>
+          <text y="0.7" text-anchor="middle" class="map-badge-text">${i + 1}</text>
+        </g>`;
+      }).join("");
+      const disc = isWild ? `<circle class="map-node-soft" cx="${loc.x}" cy="${loc.y}" r="4.4" fill="#7a6b4a" opacity="0.2"/>
+        <image class="map-node-wild" href="./img/terrain/wild.png" x="${loc.x - 3.55}" y="${loc.y - 3.55}" width="7.1" height="7.1" preserveAspectRatio="xMidYMid slice"/>
+        <circle class="map-node-disc" cx="${loc.x}" cy="${loc.y}" r="3.55" fill="none" stroke="#f4ebd6" stroke-width="0.55"/>` : `<circle class="map-node-soft" cx="${loc.x}" cy="${loc.y}" r="4.4" fill="${fill}" opacity="0.18"/>
+        <circle class="map-node-disc" cx="${loc.x}" cy="${loc.y}" r="3.55" fill="${fill}" stroke="#f4ebd6" stroke-width="0.55"/>
+        <circle cx="${loc.x}" cy="${loc.y}" r="2.55" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="0.4"/>`;
+      return `
+      <g class="map-node${terrainClass}${selected}${here}${reach}" data-loc="${loc.id}" style="cursor:pointer">
+        ${reach ? `<circle cx="${loc.x}" cy="${loc.y}" r="5" fill="none" stroke="#b8923e" stroke-width="0.5" stroke-dasharray="1.1 0.7" opacity="0.95"/>` : ""}
+        ${disc}
+        <text x="${loc.x}" y="${loc.y + 1.1}" text-anchor="middle" class="map-num">${escapeXml(numLabel)}</text>
+        <g class="map-label-g" transform="translate(${loc.x}, ${loc.y - 5.2}) rotate(${labelUpright})">
+          <clipPath id="${clipId}"><rect x="${labelX + clipPad}" y="${labelY}" width="${labelW - clipPad * 2}" height="${labelH}" rx="0.25"/></clipPath>
+          <rect class="map-label-bg" x="${labelX}" y="${labelY}" width="${labelW}" height="${labelH}" rx="0.35"/>
+          <text y="0" text-anchor="middle" dominant-baseline="central" class="map-label" style="font-size:${fontPx}px" clip-path="url(#${clipId})">${escapeXml(name)}</text>
+        </g>
+        ${monsterBadge}
+        ${witchBadges}
+      </g>`;
+    }).join("");
+    return `
+    ${mapStageOpen({ setupFill, hasPopup: Boolean(popupHtml) })}
+      ${mapWrapOpen({ setupFill, rot })}
+      ${mapSvgOpen({ setupFill, uid })}
+          ${mapSvgDefsHtml(uid)}
+          <g class="map-board-united" clip-path="url(#${uid}-shell)">
+            <g class="map-land" data-map-layer="land">
+              <rect class="map-board-face" x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-land)"/>
+              <rect x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-mist)"/>
+              <ellipse cx="14" cy="16" rx="22" ry="16" fill="url(#${uid}-water)"/>
+              <ellipse cx="86" cy="14" rx="18" ry="14" fill="url(#${uid}-peak)"/>
+              <ellipse cx="78" cy="70" rx="20" ry="14" fill="url(#${uid}-peak)" opacity="0.7"/>
+              <g class="map-roads-under">${roadsUnder}</g>
+              <g class="map-roads">${roads}</g>
+              <g class="map-nodes">${nodes}</g>
+              ${setupLite && !setupMapPawns ? "" : reputationTrackSvg(roster, board, { useTokenArt: setupMapPawns })}
+            </g>
+            ${woodCardPanelSvg(uid)}
+            ${woodCardSlotsSvg()}
+            ${roundFlagSvg(board)}
+            ${setupCoachPhase != null && setupCoachPhase >= 6 ? monsterLevelStacksSvg() : ""}
+            ${setupCoachPhase != null && setupCoachPhase >= 7 ? locationTokensAndFightDeckSvg() : ""}
+          </g>
+          ${setupCoachPhase != null && setupCoachPhase >= 8 ? goldBankAndDiceSvg() : ""}
+      ${mapSvgClose()}
+      ${mapStageClose({ popupHtml })}
+    ${showDisclaimer ? `<p class="note">Schemat: numery 0\u201318, tereny i drogi.</p>` : ""}
+  `;
+  }
+  var SCHOOL_REP_COLOR = {
+    wilk: "#3a2210",
+    gryf: "#6e5410",
+    niedzwiedz: "#541010",
+    kot: "#142448",
+    zmija: "#14341c",
+    mantikora: "#5c2c0c"
+  };
+  function schoolRepFill(schoolId) {
+    return SCHOOL_REP_COLOR[schoolId] || SCHOOL_REP_COLOR.wilk;
+  }
+  function reputationTrackSvg(roster = [], board = null, { useTokenArt = false } = {}) {
+    const cy0 = 80.6;
+    const edgePad = 85 - cy0;
+    const cx = edgePad;
+    const gap = 5.05;
+    if (board) ensureReputationClaims(board, roster);
+    const claims = Array.isArray(board?.repClaim) ? board.repClaim : [null, null, null, null, null];
+    const byRep = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+    (roster || []).forEach((p, i) => {
+      if (!p) return;
+      const r = Math.min(4, Math.max(0, Math.round(Number(p.reputation) || 0)));
+      byRep[r].push({ i, schoolId: p.schoolId || "wilk" });
+    });
+    const slots = [0, 1, 2, 3, 4].map((n) => {
+      const cy = cy0 - n * gap;
+      const present = byRep[n];
+      let leadSchool = claims[n] || null;
+      const leadPlayer = present.find((p) => p.schoolId === leadSchool) || present[0] || null;
+      if (leadPlayer) leadSchool = leadPlayer.schoolId;
+      const others = leadPlayer ? present.filter((p) => p.i !== leadPlayer.i) : present;
+      const lead = leadSchool && useTokenArt ? `<image class="map-rep-token-art map-rep-lead" href="${schoolRepTokenSrc(leadSchool)}?v=${MAP_PREP_PAWN_ASSET_V}" x="${cx - 1.95}" y="${cy - 1.95}" width="3.9" height="3.9" preserveAspectRatio="xMidYMid meet"/>` : leadSchool ? `<circle class="map-rep-lead map-rep-pawn-disc" cx="${cx}" cy="${cy}" r="1.9" fill="${schoolRepFill(leadSchool)}"/>` : "";
+      const othersHtml = others.map(({ i, schoolId }, idx) => {
+        const ox = 3.55 + idx * 2.85;
+        const oy = -idx * 0.55;
+        return `
+        <g class="map-rep-other" style="--i:${idx}" transform="translate(${cx + ox}, ${cy + oy})" data-player="${i}">
+          ${useTokenArt ? `<image class="map-rep-token-art" href="${schoolRepTokenSrc(schoolId)}?v=${MAP_PREP_PAWN_ASSET_V}" x="-1.35" y="-1.35" width="2.7" height="2.7" preserveAspectRatio="xMidYMid meet"/>` : `<circle class="map-rep-pawn-disc" r="1.35" fill="${schoolRepFill(schoolId)}" cx="0" cy="0"/>`}
+        </g>`;
+      }).join("");
+      const hasMore = others.length > 0;
+      return `
+      <g class="map-rep-slot${leadSchool ? " map-rep-slot--claimed" : ""}${hasMore ? " map-rep-slot--has-more" : ""}" data-rep="${n}">
+        <circle class="map-rep-hit" cx="${cx}" cy="${cy}" r="3.1"/>
+        <circle class="map-rep-ring" cx="${cx}" cy="${cy}" r="2.35"/>
+        <text x="${cx}" y="${cy + 0.9}" text-anchor="middle" class="map-rep-num">${n}</text>
+        ${lead}
+        <g class="map-rep-others">${othersHtml}</g>
+      </g>`;
+    }).join("");
+    return `
+    <g class="map-rep-track" aria-label="Reputacja graczy 0\u20134">
+      ${slots}
+    </g>`;
+  }
+  var _mapPopupCleanup = null;
+  function bindMapLocPopup(root, { timeoutMs = 3e3 } = {}) {
+    if (typeof _mapPopupCleanup === "function") {
+      _mapPopupCleanup();
+      _mapPopupCleanup = null;
+    }
+    const popup = root?.querySelector?.("#map-loc-popup");
+    if (!popup) return () => {
+    };
+    let gone = false;
+    let outsideTimer = null;
+    const hide = () => {
+      if (gone) return;
+      gone = true;
+      popup.classList.add("map-loc-popup--gone");
+      window.clearTimeout(timer);
+      if (outsideTimer) window.clearTimeout(outsideTimer);
+      document.removeEventListener("pointerdown", onOutside, true);
+      if (_mapPopupCleanup === hide) _mapPopupCleanup = null;
+    };
+    const onOutside = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (popup.contains(t)) return;
+      if (t.closest(".map-node-reach")) return;
+      hide();
+    };
+    const timer = window.setTimeout(hide, timeoutMs);
+    outsideTimer = window.setTimeout(() => {
+      if (!gone) document.addEventListener("pointerdown", onOutside, true);
+    }, 0);
+    _mapPopupCleanup = hide;
+    return hide;
+  }
+  function mapToolbarHtml() {
+    return "";
+  }
+  function escapeHtml2(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function terrainIcon(id) {
+    if (id === "forest") return ICO.forest();
+    if (id === "mountain") return ICO.mountain();
+    if (id === "water") return ICO.water();
+    return "";
+  }
+  function selectedLocPanel(board, roster) {
+    const loc = locById(board.selectedLoc);
+    if (!loc) {
+      return `<p class="lead">Kliknij lokacj\u0119 na mapie. Potwory ustawiasz numerami w panelu (1 na teren).</p>`;
+    }
+    const t = TERRAIN[loc.terrain];
+    const m = monsterAt(board, loc.id);
+    const here = roster.map((p, i) => ({ p, i })).filter(({ p }) => p.locationId === loc.id);
+    const hint = actionHintFor(loc);
+    const neigh = neighborsOf(loc.id).map((id) => locById(id)).filter(Boolean).map((n) => `${n.name}${typeof n.number === "number" ? ` (${n.number})` : ""}`).join(", ");
+    const otherSame = !m && MONSTER_TERRAINS.includes(loc.terrain) ? monsterOccupyingTerrain(board, loc.terrain) : null;
+    return `
+    <div class="loc-panel">
+      <h3>${escapeHtml2(loc.name)}${typeof loc.number === "number" ? ` <span class="loc-num">#${loc.number}</span>` : ""}</h3>
+      <p class="lead" style="margin:0">${terrainIcon(loc.terrain)} Teren ruchu: <strong>${t.label}</strong>${loc.school ? ` \xB7 szko\u0142a wied\u017Ami\u0144ska` : ""}</p>
+      ${loc.actionKey ? `<div class="loc-action-icon">${actionIconHtml(loc.actionKey, { width: 130, height: 40 })}</div>` : ""}
+      ${hint ? `<p class="loc-action"><strong>Znak na planszy:</strong> ${escapeHtml2(hint)}</p>` : ""}
+      <p class="note" style="margin:0.4rem 0 0">S\u0105siedzi (\u015Bcie\u017Cki): ${neigh ? escapeHtml2(neigh) : "\u2014"}</p>
+      <p class="tip" style="margin:0.5rem 0 0">Po ruchu helper poka\u017Ce kroki tej akcji (faza I, opcjonalna).</p>
+      ${m ? `<p class="warn" style="margin:0.45rem 0 0">${ICO.monster()} Potw\xF3r tu: poz. <strong>${escapeHtml2(
+      String(m.level || "?")
+    )}</strong></p>` : otherSame ? `<p class="note" style="margin:0.45rem 0 0">${ICO.monster()} Slot \u201E${escapeHtml2(
+      t.label
+    )}\u201D zaj\u0119ty przez <strong>${escapeHtml2(otherSame.loc.name)}</strong> (#${otherSame.loc.number}).</p>` : `<p class="note" style="margin:0.45rem 0 0">${ICO.monster()} Brak potwora na tym polu \u2014 ustaw numer w panelu poni\u017Cej.</p>`}
+      <p>Wied\u017Amini:
+        ${here.length ? here.map(
+      ({ p, i }) => `<span class="player-chip">${i + 1}. ${escapeHtml2(p.name)}</span>`
+    ).join(" ") : "\u2014"}
+      </p>
+    </div>
+  `;
+  }
+  function movePromptHtml(board, roster) {
+    const mp = board.movePrompt;
+    if (!mp) return "";
+    const p = roster[mp.playerIdx];
+    if (!p) return "";
+    return moveCostChooserHtml({
+      fromLoc: locById(mp.fromId),
+      toLoc: locById(mp.toId),
+      playerName: p.name,
+      selectedCostId: mp.costId || null
+    });
+  }
+  function playerTrackerHtml(roster, { schoolById: schoolById4, activeIndex, START_RESOURCES: START_RESOURCES2, players, isSolo: isSolo2 }) {
+    return roster.map((p, i) => {
+      const school = schoolById4(p.schoolId);
+      const iconFn = SCHOOL_ICON[p.schoolId] || ICO.specialty;
+      const loc = p.locationId ? locById(p.locationId) : null;
+      const fat = fatigueForReputation(Math.min(4, (p.reputation || 0) + 1));
+      const nextRep = Math.min(4, (p.reputation || 0) + 1);
+      const afterFat = handAfterFatigue(p.cards || 0, nextRep);
+      const draw = phase3DrawHint(p.cards || 0);
+      const start = START_RESOURCES2[players]?.[i] || { cards: 5, gold: 3 };
+      const guide = nowDoingGuideHtml(p, { isSolo: !!isSolo2 });
+      return `
+        <article class="tracker-card ${i === activeIndex ? "tracker-active" : ""}" data-track="${i}">
+          <header>
+            <span class="player-chip">${iconFn()}${escapeHtml2(p.name)} <span>${school.short}</span></span>
+            ${i === activeIndex ? `<span class="badge">Teraz gra</span>` : ""}
+          </header>
+
+          <div class="tracker-grid">
+            <label>Reputacja (0\u20134)
+              <div class="rep-row">
+                ${[0, 1, 2, 3, 4].map(
+        (n) => `<button type="button" class="rep-btn ${(p.reputation || 0) === n ? "active" : ""}" data-rep="${n}" data-idx="${i}">${n}</button>`
+      ).join("")}
+              </div>
+            </label>
+
+            <label>Karty na r\u0119ce
+              <div class="num-row num-row--cards">
+                <button type="button" class="btn btn-secondary" data-cards-delta="-1" data-idx="${i}">\u2212</button>
+                <span class="num-val num-val--cards">${actionCardsHtml(p.cards ?? start.cards, { height: 22 })}</span>
+                <button type="button" class="btn btn-secondary" data-cards-delta="1" data-idx="${i}">+</button>
+              </div>
+            </label>
+
+            <label>Z\u0142oto
+              <div class="num-row num-row--gold">
+                <button type="button" class="btn btn-secondary" data-gold-delta="-1" data-idx="${i}">\u2212</button>
+                <span class="num-val num-val--coins">${goldCoinsHtml(p.gold ?? start.gold, { size: 24 })}</span>
+                <button type="button" class="btn btn-secondary" data-gold-delta="1" data-idx="${i}">+</button>
+              </div>
+            </label>
+
+            <label>Eliksiry (max 4)
+              <div class="num-row">
+                <button type="button" class="btn btn-secondary" data-elixir-delta="-1" data-idx="${i}">\u2212</button>
+                <strong class="num-val">${p.elixirs ?? 0}</strong>
+                <button type="button" class="btn btn-secondary" data-elixir-delta="1" data-idx="${i}">+</button>
+              </div>
+            </label>
+          </div>
+
+          <p class="tip"><strong>Lokalizacja:</strong> ${loc ? escapeHtml2(loc.name) : "szko\u0142a startowa (ustawi si\u0119 po wyborze szko\u0142y)"}</p>
+
+          ${(p.quests || []).length ? `<div class="tracker-quests">
+                  <p class="step-kicker" style="margin:0.35rem 0 0.25rem">${ICO.quest()} Zadania (${p.quests.length})</p>
+                  <ul class="checklist">
+                    ${p.quests.map((q) => {
+        const ql = q.locationId ? locById(q.locationId) : null;
+        return `<li>
+                          <strong>${escapeHtml2(q.title || "Zadanie")}</strong>
+                          \u2192 ${ql ? escapeHtml2(ql.name) : "?"}
+                          ${q.eventCard ? ` \xB7 Event <strong>#${escapeHtml2(String(q.eventCard))}</strong>` : ""}
+                          <button type="button" class="btn btn-secondary" data-quest-done="${escapeHtml2(q.id)}" data-idx="${i}">Usu\u0144</button>
+                        </li>`;
+      }).join("")}
+                  </ul>
+                </div>` : ""}
+
+          <div class="now-row">
+            <span class="step-kicker" style="margin:0">Co robi teraz</span>
+            <div class="choice-grid now-actions">
+              ${NOW_ACTIONS.map(
+        (a) => `
+                <button type="button" class="choice ${(p.nowDoing || "czekam") === a.id ? "active" : ""}" data-now="${a.id}" data-idx="${i}">
+                  <strong>${a.label}</strong>
+                </button>`
+      ).join("")}
+            </div>
+          </div>
+
+          ${guide}
+
+          <details class="tracker-math">
+            <summary><strong>Ile kart: traci / zostaje / dobiera</strong></summary>
+            <ul class="checklist">
+              <li><strong>Teraz na r\u0119ce:</strong> ${p.cards ?? 0} (sufit 7; w fazie III cel doboru = <strong>3</strong>)</li>
+              <li><strong>Przy +1 reputacji (\u2192 ${nextRep}):</strong> zm\u0119czenie usuwa z gry <strong>${afterFat.lose}</strong> kart(y)
+                \u2192 r\u0119ka orientacyjnie <strong>${afterFat.after}</strong> (je\u015Bli usuwasz z r\u0119ki)
+                <div>Instrukcja: mo\u017Cesz usuwa\u0107 z r\u0119ki / talii / odrzuconych; potem tasujesz tali\u0119. Przyk\u0142ad: 1. trofeum = 1 karta.</div>
+              </li>
+              <li><strong>Faza III (dob\xF3r do 3):</strong> ${escapeHtml2(draw.note)}
+                <div>Po kroku doboru orientacyjnie: ${draw.afterDraw} na r\u0119ce, potem kup 1 z puli.</div>
+              </li>
+              <li><strong>Start tej pozycji przy stole:</strong> ${actionCardsHtml(start.cards, { height: 20 })} ${goldCoinsHtml(start.gold, { size: 22 })}</li>
+            </ul>
+            <div class="actions" style="margin-top:0.6rem">
+              <button type="button" class="btn btn-primary" data-apply-fatigue data-idx="${i}">
+                +1 reputacja i odejmij zm\u0119czenie z r\u0119ki (${fat} kart)
+              </button>
+              <button type="button" class="btn btn-secondary" data-apply-draw7 data-idx="${i}">
+                Ustaw r\u0119k\u0119 jak po doborze fazy III (3)
+              </button>
+            </div>
+          </details>
+        </article>
+      `;
+    }).join("");
+  }
+
+  // js/map/svg-projection.js
+  function projectSvgElementToHost(geomEl, hostEl) {
+    if (!geomEl || !hostEl || typeof geomEl.getBBox !== "function") return null;
+    const ctm = geomEl.getScreenCTM?.();
+    if (!ctm) return null;
+    let bb;
+    try {
+      bb = geomEl.getBBox();
+    } catch {
+      return null;
+    }
+    if (!(bb.width > 0) || !(bb.height > 0)) return null;
+    const hostR = hostEl.getBoundingClientRect();
+    const corners = [
+      [bb.x, bb.y],
+      [bb.x + bb.width, bb.y],
+      [bb.x + bb.width, bb.y + bb.height],
+      [bb.x, bb.y + bb.height]
+    ];
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of corners) {
+      const sx = ctm.a * x + ctm.c * y + ctm.e;
+      const sy = ctm.b * x + ctm.d * y + ctm.f;
+      minX = Math.min(minX, sx);
+      minY = Math.min(minY, sy);
+      maxX = Math.max(maxX, sx);
+      maxY = Math.max(maxY, sy);
+    }
+    if (!Number.isFinite(minX)) return null;
+    return {
+      left: minX - hostR.left,
+      top: minY - hostR.top,
+      width: maxX - minX,
+      height: maxY - minY
+    };
+  }
+
+  // js/map/coach-slot-metrics.js
+  function queryActionDeckSlot(searchRoot) {
+    if (!searchRoot) return null;
+    return queryMapSlot(searchRoot, MAP_SLOT.ACTION_POOL) || searchRoot.querySelector(".map-action-deck-slot") || searchRoot.querySelector(`.map-card-slot[data-slot="${ACTION_DECK_SLOT_ID}"]`);
+  }
+  function queryActionDeckLip(searchRoot) {
+    const slot = queryActionDeckSlot(searchRoot);
+    return slot?.querySelector(".map-action-deck-lip") || slot?.querySelector(".map-card-slot-lip") || null;
+  }
+  function resolveMapWrap(layerOrRoot) {
+    return layerOrRoot?.closest?.(".map-wrap") || layerOrRoot?.querySelector?.(".map-wrap") || null;
+  }
+  function pickSlotGeom(slotEl, metric) {
+    if (!slotEl) return null;
+    const lip = slotEl.querySelector?.(".map-card-slot-lip");
+    const well = slotEl.querySelector?.(".map-card-slot-well");
+    if (metric === "lip" && lip) return lip;
+    if (metric === "well" && well) return well;
+    return well || lip || slotEl;
+  }
+  function measureSvgGeomInLayer(positionRoot, geomEl) {
+    if (!positionRoot || !geomEl) return null;
+    const svg2 = geomEl.ownerSVGElement;
+    if (!svg2 || typeof geomEl.getBBox !== "function") return null;
+    let bb;
+    try {
+      bb = geomEl.getBBox();
+    } catch {
+      return null;
+    }
+    if (!(bb.width > 0) || !(bb.height > 0)) return null;
+    const ctm = geomEl.getScreenCTM?.();
+    if (!ctm) return null;
+    const pt = svg2.createSVGPoint();
+    const layerR = positionRoot.getBoundingClientRect();
+    const corners = [
+      [bb.x, bb.y],
+      [bb.x + bb.width, bb.y],
+      [bb.x + bb.width, bb.y + bb.height],
+      [bb.x, bb.y + bb.height]
+    ];
+    const xs = [];
+    const ys = [];
+    for (const [x, y] of corners) {
+      pt.x = x;
+      pt.y = y;
+      const sc = pt.matrixTransform(ctm);
+      xs.push(sc.x - layerR.left);
+      ys.push(sc.y - layerR.top);
+    }
+    const left = Math.min(...xs);
+    const top = Math.min(...ys);
+    const width = Math.max(...xs) - left;
+    const height = Math.max(...ys) - top;
+    if (width < 1 || height < 1) return null;
+    return { left, top, width, height };
+  }
+  function measureActionDeckLipFromViewBox(mapWrap, positionRoot) {
+    const svg2 = mapWrap?.querySelector?.(".map-svg");
+    if (!svg2 || !positionRoot) return null;
+    const ctm = svg2.getScreenCTM?.();
+    if (!ctm) return null;
+    const { x, y, w, h } = actionDeckLipSvgRect();
+    const pt = svg2.createSVGPoint();
+    const layerR = positionRoot.getBoundingClientRect();
+    const corners = [
+      [x, y],
+      [x + w, y],
+      [x + w, y + h],
+      [x, y + h]
+    ];
+    const xs = [];
+    const ys = [];
+    for (const [cx, cy] of corners) {
+      pt.x = cx;
+      pt.y = cy;
+      const sc = pt.matrixTransform(ctm);
+      xs.push(sc.x - layerR.left);
+      ys.push(sc.y - layerR.top);
+    }
+    const left = Math.min(...xs);
+    const top = Math.min(...ys);
+    const width = Math.max(...xs) - left;
+    const height = Math.max(...ys) - top;
+    if (width < 1 || height < 1) return null;
+    return { left, top, width, height };
+  }
+  function measureClientRectInLayer(positionRoot, target) {
+    const layerR = positionRoot.getBoundingClientRect();
+    const targetR = target.getBoundingClientRect();
+    if (layerR.width < 4 || targetR.width < 1) return null;
+    return {
+      left: targetR.left - layerR.left,
+      top: targetR.top - layerR.top,
+      width: targetR.width,
+      height: targetR.height
+    };
+  }
+  function measureSlotBoxInLayer(positionRoot, slotEl, { metric = "lip" } = {}) {
+    if (!positionRoot || !slotEl) return null;
+    const geom = pickSlotGeom(slotEl, metric);
+    if (geom instanceof SVGElement) {
+      const projected = projectSvgElementToHost(geom, positionRoot);
+      if (projected) return projected;
+    }
+    const fromSvg = measureSvgGeomInLayer(positionRoot, geom);
+    if (fromSvg) return fromSvg;
+    const mapWrap = resolveMapWrap(positionRoot);
+    if (metric === "lip" && slotEl.classList?.contains("map-action-deck-slot") && mapWrap) {
+      const fallback = measureActionDeckLipFromViewBox(mapWrap, positionRoot);
+      if (fallback) return fallback;
+    }
+    const target = geom || slotEl;
+    return measureClientRectInLayer(positionRoot, target);
+  }
+  function measureActionDeckLipBox(positionRoot, searchRoot) {
+    if (!positionRoot) return null;
+    const lip = queryActionDeckLip(searchRoot);
+    if (lip) {
+      const m = measureSvgGeomInLayer(positionRoot, lip);
+      if (m) return m;
+    }
+    const mapWrap = resolveMapWrap(positionRoot) || resolveMapWrap(searchRoot);
+    return mapWrap ? measureActionDeckLipFromViewBox(mapWrap, positionRoot) : null;
+  }
+
+  // js/map/overlay-layer.js
+  function getMapOverlayLayer(mapWrap) {
+    if (!mapWrap) return null;
+    return mapWrap.querySelector('[data-map-layer="overlay"]') || mapWrap;
+  }
+  function getMapPositionRoot(mapWrap) {
+    return getMapOverlayLayer(mapWrap) || mapWrap;
+  }
+  function mountCoachOverlays(preview) {
+    const mapWrap = preview?.querySelector?.(".map-wrap") ?? null;
+    const overlay = getMapOverlayLayer(mapWrap);
+    const positionRoot = getMapPositionRoot(mapWrap);
+    if (!preview || !overlay) {
+      return { mapWrap, overlay, positionRoot };
+    }
+    preview.querySelectorAll(".setup-deal").forEach((el) => {
+      if (el.parentElement !== overlay) overlay.appendChild(el);
+    });
+    return { mapWrap, overlay, positionRoot };
+  }
+  function queryActionDeckSlot2(searchRoot) {
+    return queryMapSlot(searchRoot, MAP_SLOT.ACTION_POOL) || searchRoot?.querySelector?.(".map-action-deck-slot") || searchRoot?.querySelector?.('.map-card-slot[data-slot="6"]') || null;
+  }
+
+  // js/map/action-deck-mount.js
+  function unmountMainDeckToOverlay(preview, dealRoot) {
+    const overlay = preview?.querySelector?.('[data-map-layer="overlay"]');
+    if (!overlay || !dealRoot) return;
+    if (dealRoot.parentElement !== overlay) overlay.appendChild(dealRoot);
+    dealRoot.classList.remove("is-svg-anchored");
+  }
+  function isMainDeckSvgAnchored(dealRoot) {
+    return Boolean(dealRoot?.classList?.contains("is-svg-anchored"));
+  }
+
+  // js/quests.js
+  function escapeHtml3(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function ensureQuests(player) {
+    if (!player) return;
+    if (!Array.isArray(player.quests)) player.quests = [];
+    return player.quests;
+  }
+  function newQuestId() {
+    return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+  function exploreDeckChooserHtml({ selected = null } = {}) {
+    return `
+    <div class="explore-chooser">
+      <h2 class="explore-chooser-title">Co eksplorujesz?</h2>
+      <p class="lead" style="margin:0">Kliknij kart\u0119: <strong>dzikie ost\u0119py</strong> albo <strong>miasto</strong>.</p>
+      <div class="explore-card-grid" role="group" aria-label="Talia eksploracji">
+        <div class="explore-card-slot">
+          <button type="button" class="explore-card ${selected === "wilds" ? "active" : ""}" data-explore-deck="wilds" aria-label="Dzikie ost\u0119py" aria-pressed="${selected === "wilds" ? "true" : "false"}">
+            <img src="./img/explore/wilds.png" alt="" width="180" height="272" decoding="async" draggable="false" />
+          </button>
+          <span class="explore-card-label"><strong>Dzikie ost\u0119py</strong></span>
+        </div>
+        <div class="explore-card-slot">
+          <button type="button" class="explore-card ${selected === "city" ? "active" : ""}" data-explore-deck="city" aria-label="Miasto" aria-pressed="${selected === "city" ? "true" : "false"}">
+            <img src="./img/explore/city.png" alt="" width="180" height="272" decoding="async" draggable="false" />
+          </button>
+          <span class="explore-card-label"><strong>Miasto</strong></span>
+        </div>
+      </div>
+    </div>
+  `;
+  }
+  function exploreResolveHtml({ deck, isSolo: isSolo2, player }) {
+    const deckLabel = deck === "wilds" ? "dzikie ost\u0119py" : "miasto";
+    const steps = isSolo2 ? `
+      <ol class="checklist">
+        <li>Dobierz kart\u0119 z talii <strong>${escapeHtml3(deckLabel)}</strong> (sam).</li>
+        <li>Zakryj rezultaty \u2014 czytaj tylko wst\u0119p i 2 opcje.</li>
+        <li>Wybierz opcj\u0119 A albo B; odczytaj <strong>tylko jej</strong> rezultat.</li>
+        <li>Efekt natychmiastowy \u2192 zastosuj poni\u017Cej (z\u0142oto / karty). Potem karta do pude\u0142ka.</li>
+        <li>Je\u015Bli wynik ma s\u0142owo <strong>Zadanie / Quest</strong> \u2192 dodaj zadanie poni\u017Cej (lokacja + nr karty zdarzenia).</li>
+      </ol>` : `
+      <ol class="checklist">
+        <li>Gracz po prawej dobiera z talii <strong>${escapeHtml3(deckLabel)}</strong>.</li>
+        <li>Czyta wst\u0119p + opcje <strong>bez</strong> rezultat\xF3w.</li>
+        <li>Ty wybierasz; s\u0142yszysz tylko wybrany rezultat.</li>
+        <li>Efekt natychmiastowy \u2192 dostosuj z\u0142oto/karty poni\u017Cej. Albo zapisz <strong>zadanie</strong>.</li>
+      </ol>`;
+    return `
+    ${questAddFormHtml()}
+    ${questsListHtml(player)}
+    <div class="guide-box">
+      <p class="step-kicker" style="margin:0">Karta przeczytana \xB7 ${escapeHtml3(deckLabel)}</p>
+      <h3 style="margin:0.25rem 0 0.4rem">Zastosuj efekt</h3>
+      ${steps}
+      <p class="note">Brak z\u0142ota na opcj\u0119 = nie mo\u017Cesz jej wybra\u0107. Robisz tyle efektu, ile da si\u0119.</p>
+      <p class="tip">Je\u015Bli karta daje <strong>\u017Ceton tropu</strong> \u2014 zaznacz 1 trop poni\u017Cej. <strong>Zadanie</strong> (lokacja + nr Event) zapisuj <strong>u g\xF3ry</strong>. Brak \u017Ceton\xF3w w stosie = ten fragment efektu przepada.</p>
+    </div>
+    ${resourceAdjustHtml(player, { title: "Po karcie \u2014 popraw tracker" })}
+  `;
+  }
+  function resourceAdjustHtml(player, { title = "Zasoby" } = {}) {
+    if (!player) return "";
+    return `
+    <div class="guide-box resource-adjust">
+      <p class="step-kicker" style="margin:0">${escapeHtml3(title)}</p>
+      <p class="lead" style="margin:0.3rem 0 0">Teraz: <strong>${player.cards ?? 0}</strong> kart \xB7 <strong>${player.gold ?? 0}</strong> z\u0142ota \xB7 <strong>${player.elixirs ?? 0}</strong> eliksir\xF3w</p>
+      <div class="tracker-grid" style="margin-top:0.65rem">
+        <label>Karty
+          <div class="num-row">
+            <button type="button" class="btn btn-secondary" data-adj="cards" data-delta="-1">\u2212</button>
+            <strong class="num-val">${player.cards ?? 0}</strong>
+            <button type="button" class="btn btn-secondary" data-adj="cards" data-delta="1">+</button>
+          </div>
+        </label>
+        <label>Z\u0142oto (monety)
+          <div class="num-row">
+            <button type="button" class="btn btn-secondary" data-adj="gold" data-delta="-1">\u2212</button>
+            <strong class="num-val">${player.gold ?? 0}</strong>
+            <button type="button" class="btn btn-secondary" data-adj="gold" data-delta="1">+</button>
+          </div>
+        </label>
+        <label>Eliksiry
+          <div class="num-row">
+            <button type="button" class="btn btn-secondary" data-adj="elixirs" data-delta="-1">\u2212</button>
+            <strong class="num-val">${player.elixirs ?? 0}</strong>
+            <button type="button" class="btn btn-secondary" data-adj="elixirs" data-delta="1">+</button>
+          </div>
+        </label>
+      </div>
+    </div>
+  `;
+  }
+  function questAddFormHtml() {
+    const opts = LOCATIONS.map(
+      (l) => `<option value="${escapeHtml3(l.id)}">${escapeHtml3(l.name)} (#${l.number})</option>`
+    ).join("");
+    return `
+    <div class="guide-box quest-add">
+      <p class="step-kicker" style="margin:0">${ICO.quest()} Zadania (u g\xF3ry)</p>
+      <p class="lead" style="margin:0.3rem 0 0">Tu zapisujesz zadania z kart (lokacja + nr Event) oraz doj\u015Bcie z \u017Cetonu tropienia. Po wej\u015Bciu na pole helper przypomni o karcie zdarzenia.</p>
+      <label>Tytu\u0142 / skr\xF3t z karty
+        <input type="text" id="quest-title" maxlength="80" placeholder="np. Quest: Kaer Seren / trop" />
+      </label>
+      <label>Lokacja do doj\u015Bcia
+        <select id="quest-loc">${opts}</select>
+      </label>
+      <label>Nr karty zdarzenia (Event) do przeczytania na miejscu
+        <input type="text" id="quest-event" maxlength="12" placeholder="np. 33" />
+      </label>
+      <label>Notatka (opcjonalnie)
+        <input type="text" id="quest-note" maxlength="120" placeholder="koszt wej\u015Bcia, teren \u017Cetonu\u2026" />
+      </label>
+      <div class="actions" style="margin-top:0.55rem">
+        <button type="button" class="btn btn-primary" id="quest-add-btn">Dodaj zadanie</button>
+      </div>
+    </div>
+  `;
+  }
+  function questsListHtml(player) {
+    const list = ensureQuests(player);
+    if (!list.length) {
+      return `<p class="note">Brak aktywnych zada\u0144.</p>`;
+    }
+    return `
+    <div class="quests-list">
+      <h3>${ICO.quest()} Twoje zadania</h3>
+      <ul class="checklist">
+        ${list.map((q) => {
+      const loc = locById(q.locationId);
+      return `<li data-quest-id="${escapeHtml3(q.id)}">
+              <strong>${escapeHtml3(q.title || "Zadanie")}</strong>
+              \u2192 ${loc ? escapeHtml3(loc.name) : "?"}
+              ${q.eventCard ? ` \xB7 Event <strong>#${escapeHtml3(String(q.eventCard))}</strong>` : ""}
+              ${q.note ? `<div class="note">${escapeHtml3(q.note)}</div>` : ""}
+              <button type="button" class="btn btn-secondary" data-quest-done="${escapeHtml3(q.id)}">Rozwi\u0105zane / usu\u0144</button>
+            </li>`;
+    }).join("")}
+      </ul>
+    </div>
+  `;
+  }
+  function questArrivalHtml(player, locId) {
+    const list = ensureQuests(player).filter((q) => q.locationId === locId);
+    if (!list.length) return "";
+    const loc = locById(locId);
+    return `
+    <div class="guide-box guide-quest-hit" role="alert">
+      <p class="step-kicker" style="margin:0">${ICO.quest()} Zadanie na tym polu</p>
+      <h3 style="margin:0.25rem 0 0.4rem">Jeste\u015B na <strong>${escapeHtml3(loc?.name || "?")}</strong></h3>
+      <p class="lead" style="margin:0"><strong>Faza I</strong> \u2014 mo\u017Cesz <em>opcjonalnie</em> rozwi\u0105za\u0107 zadanie teraz (Event z nr poni\u017Cej). To <strong>nie</strong> jest faza II.</p>
+      <p class="note" style="margin:0.35rem 0 0">Je\u015Bli na polu jest te\u017C potw\xF3r: zadanie rozwi\u0105zujesz w fazie I (opcjonalnie). W fazie II wybierasz <strong>tylko 1</strong> \u2014 walka jest <em>opcjonalna</em> (mo\u017Cesz zamiast niej medytowa\u0107 albo eksplorowa\u0107).</p>
+      <ul class="checklist">
+        ${list.map(
+      (q) => `
+          <li>
+            <strong>${escapeHtml3(q.title || "Zadanie")}</strong>
+            ${q.eventCard ? ` \u2014 gracz po prawej bierze kart\u0119 zdarzenia <strong>#${escapeHtml3(String(q.eventCard))}</strong> i czyta.` : " \u2014 sprawd\u017A kart\u0119 zadania (nr zdarzenia)."}
+            ${q.note ? `<div class="note">${escapeHtml3(q.note)}</div>` : ""}
+            <button type="button" class="btn btn-primary" data-quest-done="${escapeHtml3(q.id)}">Rozwi\u0105zane \u2014 usu\u0144 zadanie</button>
+          </li>`
+    ).join("")}
+      </ul>
+    </div>
+  `;
+  }
+  function turnSummaryHtml(player, { phase3Hint, schoolName, turnNumber, isSolo: isSolo2 } = {}) {
+    if (!player) return "";
+    const loc = player.locationId ? locById(player.locationId) : null;
+    const quests = ensureQuests(player);
+    const cards = player.cards ?? 0;
+    const gold = player.gold ?? 0;
+    const elixirs = player.elixirs ?? 0;
+    const hint = phase3Hint || {};
+    const turnLine = turnNumber != null ? `<li><strong>Tura:</strong> ${Number(turnNumber)}${isSolo2 ? ' <span class="note">(helper liczy automatycznie)</span>' : ""}</li>` : "";
+    return `
+    <div class="guide-box turn-summary">
+      <p class="step-kicker" style="margin:0">Koniec tury \u2014 podsumowanie</p>
+      <h3 style="margin:0.25rem 0 0.45rem">${escapeHtml3(player.name)}${schoolName ? ` \xB7 ${escapeHtml3(schoolName)}` : ""}</h3>
+      <ul class="checklist">
+        ${turnLine}
+        <li><strong>Lokalizacja:</strong> ${loc ? `${escapeHtml3(loc.name)} (#${loc.number})` : "\u2014"}</li>
+        <li><strong>Karty na r\u0119ce:</strong> ${cards} <span class="note">(po fazie III zwykle 3 przed/po kupnie \u2014 limit 7)</span></li>
+        <li><strong>Z\u0142oto:</strong> ${gold}</li>
+        <li><strong>Eliksiry:</strong> ${elixirs} / 4</li>
+        <li><strong>Reputacja:</strong> ${player.reputation ?? 0}</li>
+        <li><strong>Zadania otwarte:</strong> ${quests.length}${quests.length ? ` \u2014 ${quests.map((q) => {
+      const L = locById(q.locationId);
+      return `${escapeHtml3(q.title || "zadanie")}@${L ? escapeHtml3(L.name) : "?"}`;
+    }).join("; ")}` : ""}</li>
+      </ul>
+      ${hint.note ? `<p class="tip"><strong>Faza III (przypomnienie):</strong> ${escapeHtml3(hint.note)}</p>` : ""}
+      <p class="note">Je\u015Bli co\u015B nie gra po efekcie karty \u2014 wr\xF3\u0107 do Sto\u0142u / tracker\xF3w i popraw \u2212/+.</p>
+      ${questsListHtml(player)}
+    </div>
+  `;
+  }
+
   // js/app.js
   var STORAGE_KEY = "wiedzmin-stary-swiat-helper-v4";
   var UI_SCALE_KEY = "wiedzmin-stary-swiat-ui-scale";
@@ -4136,7 +4782,7 @@
       if (e.key !== "Enter") return;
       if (typing) return;
       if (tag && tag.matches && tag.matches("button, [contenteditable=true]")) return;
-      const primary = appEl?.querySelector(".btn-primary:not([disabled])") || appEl?.querySelector("#next:not([disabled]), #pb-next:not([disabled]), #to-roster, #to-setup, #to-turn, #confirm-order");
+      const primary = appEl?.querySelector(".flow-actions .btn-primary:not([disabled])") || appEl?.querySelector(".btn-primary:not([disabled])") || appEl?.querySelector("#next:not([disabled]), #pb-next:not([disabled]), #to-roster, #to-setup, #to-turn, #confirm-order, #deal-next");
       if (!primary) return;
       e.preventDefault();
       primary.click();
@@ -4223,6 +4869,7 @@
       "roster",
       "playerboard",
       "order",
+      "deal",
       "setup",
       "board",
       "turn",
@@ -4359,7 +5006,7 @@
       finish();
     };
     root.addEventListener("animationend", onEnd);
-    window.setTimeout(finish, 720);
+    window.setTimeout(finish, 420);
   }
   function startNewAdventure() {
     leaveSplashThen(() => {
@@ -4442,7 +5089,7 @@
       p._prevSchoolId = p.schoolId;
     });
   }
-  function schoolById(id) {
+  function schoolById3(id) {
     return SCHOOLS.find((s) => s.id === id) || SCHOOLS[0];
   }
   function activePlayer() {
@@ -4458,36 +5105,31 @@
     saveState();
     if (rerender) render();
   }
-  function leavePanelThen(next) {
-    const panel = appEl.querySelector(".panel");
-    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!panel || reduce) {
-      next();
+  function go(view, extras = {}, { direction = "forward", animate = true } = {}) {
+    const apply = () => {
+      state.view = view;
+      Object.assign(state, extras);
+      if (view !== "splash") state.adventureStarted = true;
+      saveState({ immediate: true });
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    if (!animate) {
+      apply();
       return;
     }
-    if (panel.classList.contains("is-leaving")) return;
-    panel.classList.add("is-leaving");
-    let finished = false;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      panel.removeEventListener("animationend", onEnd);
-      next();
-    };
-    const onEnd = (event) => {
-      if (event.target !== panel) return;
-      finish();
-    };
-    panel.addEventListener("animationend", onEnd);
-    window.setTimeout(finish, 420);
+    runScreenTransition(apply, { direction });
   }
-  function go(view, extras = {}) {
-    state.view = view;
-    Object.assign(state, extras);
-    if (view !== "splash") state.adventureStarted = true;
-    saveState({ immediate: true });
-    render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  function goBack(view, extras = {}) {
+    go(view, extras, { direction: "back" });
+  }
+  function transitionRender(mutate, { direction = "forward" } = {}) {
+    runScreenTransition(() => {
+      mutate();
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, { direction });
   }
   function render() {
     if (bootGate) {
@@ -4499,6 +5141,7 @@
     else if (state.view === "roster") renderRoster();
     else if (state.view === "playerboard") renderPlayerBoard();
     else if (state.view === "order") renderOrder();
+    else if (state.view === "deal") renderDeal();
     else if (state.view === "setup") renderSetup();
     else if (state.view === "board") renderBoard();
     else if (state.view === "turn") renderTurn();
@@ -4646,7 +5289,7 @@
             </button>`
     ).join("")}
         </div>
-        <div class="actions home-hero-actions">
+        <div class="actions flow-actions home-hero-actions">
           <button type="button" class="btn btn-primary" id="to-roster">Dalej</button>
         </div>
       </div>
@@ -4665,10 +5308,10 @@
       btn.addEventListener("click", () => selectPlayers(Number(btn.dataset.players)));
     });
     appEl.querySelector("#to-roster").addEventListener("click", () => {
-      leavePanelThen(() => go("roster"));
+      go("roster");
     });
   }
-  function schoolArtSrc(id) {
+  function schoolArtSrc2(id) {
     return `./img/schools/${id === "kot" ? "kot-v10" : id}.png?v=10`;
   }
   function renderRoster() {
@@ -4694,7 +5337,7 @@
               <div class="roster-card" data-idx="${i}">
                 <div class="roster-card-top">
                   <span class="splash-medal-disc splash-medal-disc--${sid} roster-medal" data-medal>
-                    <img class="school-art school-art--${sid}" src="${schoolArtSrc(sid)}" alt="" width="64" height="64" decoding="async" />
+                    <img class="school-art school-art--${sid}" src="${schoolArtSrc2(sid)}" alt="" width="64" height="64" decoding="async" />
                   </span>
                   <strong class="roster-card-label">${escapeHtml4(label)}</strong>
                 </div>
@@ -4714,7 +5357,7 @@
               </div>`;
     }).join("")}
         </div>
-        <div class="actions roster-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="back-home">Wstecz</button>
           <button type="button" class="btn btn-primary" id="to-order">Dalej</button>
         </div>
@@ -4741,7 +5384,7 @@
       }
       if (img) {
         img.className = `school-art school-art--${schoolId}`;
-        img.src = schoolArtSrc(schoolId);
+        img.src = schoolArtSrc2(schoolId);
       }
     }
     function assignSchool(player, schoolId) {
@@ -4827,35 +5470,43 @@
     });
     appEl.querySelector("#roll-schools")?.addEventListener("click", () => rollSchoolsForAll());
     appEl.querySelector("#back-home").addEventListener("click", () => {
-      leavePanelThen(() => go("home"));
+      goBack("home");
     });
     appEl.querySelector("#to-order").addEventListener("click", () => {
       syncNamesFromDom();
       applySchoolStarts();
       state.playerBoardIndex = 0;
-      leavePanelThen(() => go("playerboard"));
-    });
-  }
-  function finishPlayerBoardPrep() {
-    leavePanelThen(() => {
       if (isSolo()) {
-        applyStartResources(state.roster, state.players, { force: true });
-        state.setupIndex = 0;
-        go("setup");
+        go("playerboard");
       } else {
         state.orderDice = [];
         go("order");
       }
     });
   }
+  function playerBoardStepIndex(steps, stepId) {
+    const i = steps.findIndex((s) => s.id === stepId);
+    return i >= 0 ? i : Math.max(0, steps.length - 1);
+  }
+  function finishPlayerBoardPrep() {
+    runScreenTransition(() => {
+      applyStartResources(state.roster, state.players, { force: true });
+      state.setupIndex = 0;
+      _setupEnterBoard = true;
+      state.view = "setup";
+      saveState({ immediate: true });
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, { direction: "forward" });
+  }
   function renderPlayerBoard() {
     ensureRoster();
     const steps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
     const index = Math.min(state.playerBoardIndex, steps.length - 1);
     const step = steps[index];
-    const pct = Math.round((index + 1) / steps.length * 100);
     const isLast = index >= steps.length - 1;
-    const nextLabel = isLast ? isSolo() ? "Przygotowanie sto\u0142u" : "Kolejno\u015B\u0107 i zasoby" : "Dalej";
+    const isDeckStep = step.id === "deck";
+    const isFigureStep = step.id === "figure-ring";
     const boardSrc = step.boardImg || PLAYER_BOARD_SCAN_SRC;
     const boardV = step.boardVer ?? 5;
     const overlaySrc = step.boardOverlayImg || "";
@@ -4863,17 +5514,15 @@
     const overlayPulse = step.boardOverlayPulse !== false && Boolean(overlaySrc);
     const trophyStep = Boolean(step.schoolTrophyPrep);
     const actionDeckStep = Boolean(step.schoolActionDeckPrep);
+    const figureStep = Boolean(step.figurePrep);
     const active = activePlayer();
     const schoolId = canonicalSchoolId(active?.schoolId);
+    const school = schoolById3(schoolId);
     const trophySc = trophyStep ? schoolTrophyPrepScenario(state.players) : null;
     shell(`
     <section class="panel player-board-screen" data-pb-focus="${escapeAttr(step.focus)}" data-pb-step="${escapeAttr(step.id || "")}">
-      <div class="player-board-stack${step.minimal ? " player-board-stack--hero-mat" : trophyStep ? " player-board-stack--trophies" : actionDeckStep ? " player-board-stack--action-deck" : " player-board-stack--coach"}">
+      <div class="player-board-stack${step.minimal ? " player-board-stack--hero-mat" : trophyStep ? " player-board-stack--trophies" : actionDeckStep ? " player-board-stack--action-deck" : figureStep ? " player-board-stack--figure" : " player-board-stack--coach"}">
         <header class="player-board-head">
-          ${step.minimal ? "" : `<div class="progress setup-progress player-board-progress">
-            <div class="progress-bar"><span style="width:${pct}%"></span></div>
-          </div>
-          <p class="step-kicker">Krok ${index + 1} z ${steps.length}</p>`}
           <h1>Przygotuj planszetk\u0119</h1>
           <div class="home-hero-rule" aria-hidden="true"></div>
         </header>
@@ -4887,6 +5536,12 @@
     }) : actionDeckStep ? playerBoardActionDeckMainHtml({
       boardSrc,
       boardV
+    }) : figureStep ? playerBoardFigureMainHtml({
+      schoolId,
+      schoolName: school.name,
+      playerName: active?.name || "",
+      playerSlot: state.activeIndex + 1,
+      solo: isSolo()
     }) : `
           <div class="player-board-stage" data-focus="${escapeAttr(step.focus)}" aria-live="polite">
             ${step.minimal ? "" : `<span class="player-board-focus" aria-hidden="true"></span>`}
@@ -4923,9 +5578,9 @@
           </div>`}`}
         </div>
 
-        <div class="actions player-board-actions roster-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="pb-prev">Wstecz</button>
-          <button type="button" class="btn btn-primary" id="pb-next">${escapeHtml4(nextLabel)}</button>
+          <button type="button" class="btn btn-primary" id="pb-next">Dalej</button>
         </div>
       </div>
     </section>
@@ -4937,6 +5592,9 @@
     }
     if (actionDeckStep && stackEl) {
       bindSchoolActionDeckStep(stackEl);
+    }
+    if (figureStep && stackEl) {
+      bindPlayerBoardFigureStep(stackEl);
     }
     const scanFig = appEl.querySelector("#player-board-scan");
     const scanImg = scanFig?.querySelector(".player-board-scan__img");
@@ -4961,25 +5619,30 @@
       }
     }
     appEl.querySelector("#pb-prev").addEventListener("click", () => {
-      if (index === 0) {
-        leavePanelThen(() => go("roster"));
+      if (isFigureStep) {
+        goBack("deal");
         return;
       }
-      state.playerBoardIndex = index - 1;
-      saveState();
-      render();
+      if (index === 0) {
+        goBack(isSolo() ? "roster" : "order");
+        return;
+      }
+      transitionRender(() => {
+        state.playerBoardIndex = index - 1;
+      }, { direction: "back" });
     });
     appEl.querySelector("#pb-next").addEventListener("click", () => {
+      if (isDeckStep) {
+        go("deal");
+        return;
+      }
       if (isLast) {
-        if (isSolo() && step.id === "resources") {
-          applyStartResources(state.roster, state.players, { force: true });
-        }
         finishPlayerBoardPrep();
         return;
       }
-      state.playerBoardIndex = index + 1;
-      saveState();
-      render();
+      transitionRender(() => {
+        state.playerBoardIndex = index + 1;
+      });
     });
   }
   function paintOrderItem(el, player) {
@@ -4995,14 +5658,14 @@
         img.draggable = false;
         if (img.dataset.schoolId !== sid) {
           img.dataset.schoolId = sid;
-          img.src = schoolArtSrc(sid);
+          img.src = schoolArtSrc2(sid);
         }
       }
     }
     const nameEl = el.querySelector(".order-name");
     if (nameEl) nameEl.textContent = player.name || "";
     const schoolEl = el.querySelector(".order-school");
-    if (schoolEl) schoolEl.textContent = schoolById(sid).short;
+    if (schoolEl) schoolEl.textContent = schoolById3(sid).short;
   }
   function applyOrderRoster(list, nextRoster) {
     const items = [...list.querySelectorAll(".order-item")];
@@ -5101,18 +5764,18 @@
               <li class="order-item" data-idx="${i}">
                 <span class="order-pos">${i + 1}</span>
                 <span class="splash-medal-disc splash-medal-disc--${sid} order-medal" data-school-id="${sid}" draggable="true" title="Przeci\u0105gnij, by zmieni\u0107 kolejno\u015B\u0107">
-                  <img class="school-art school-art--${sid}" data-school-id="${sid}" src="${schoolArtSrc(sid)}" alt="" width="96" height="96" decoding="async" draggable="false" />
+                  <img class="school-art school-art--${sid}" data-school-id="${sid}" src="${schoolArtSrc2(sid)}" alt="" width="96" height="96" decoding="async" draggable="false" />
                 </span>
                 <strong class="order-name">${escapeHtml4(p.name)}</strong>
-                <span class="order-school">${escapeHtml4(schoolById(sid).short)}</span>
+                <span class="order-school">${escapeHtml4(schoolById3(sid).short)}</span>
                 ${orderStartResourcesHtml(res.cards, res.gold)}
               </li>`;
     }).join("")}
         </ul>
 
-        <div class="actions order-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="back-roster">Wstecz</button>
-          <button type="button" class="btn btn-primary" id="confirm-order">Zatwierd\u017A i rozdaj</button>
+          <button type="button" class="btn btn-primary" id="confirm-order">Dalej</button>
         </div>
       </div>
     </section>
@@ -5179,15 +5842,47 @@
       applyOrderRoster(list, next);
     });
     appEl.querySelector("#back-roster").addEventListener("click", () => {
-      leavePanelThen(() => go("playerboard"));
+      goBack("roster");
     });
     appEl.querySelector("#confirm-order").addEventListener("click", () => {
-      applyStartResources(state.roster, state.players, { force: true });
       state.activeIndex = 0;
-      state.setupIndex = 0;
+      state.playerBoardIndex = 0;
       state.orderDice = [];
       saveState();
-      leavePanelThen(() => go("setup"));
+      go("playerboard");
+    });
+  }
+  function renderDeal() {
+    ensureRoster();
+    const intro = startResourcesDealIntro(isSolo());
+    const steps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
+    const deckPbIndex = playerBoardStepIndex(steps, "deck");
+    const figurePbIndex = playerBoardStepIndex(steps, "figure-ring");
+    shell(`
+    <section class="panel deal-screen order-screen">
+      <div class="order-stack deal-stack">
+        <header class="order-head">
+          <h1>${escapeHtml4(intro.title)}</h1>
+          ${intro.lead ? `<p class="deal-lead">${escapeHtml4(intro.lead)}</p>` : ""}
+          <div class="home-hero-rule" aria-hidden="true"></div>
+        </header>
+        ${startResourcesDealListHtml({ roster: state.roster, playerCount: state.players })}
+        <div class="actions flow-actions">
+          <button type="button" class="btn btn-secondary" id="deal-back">Wstecz</button>
+          <button type="button" class="btn btn-primary" id="deal-next">Dalej</button>
+        </div>
+      </div>
+    </section>
+  `);
+    appEl.querySelector("#deal-back")?.addEventListener("click", () => {
+      state.playerBoardIndex = deckPbIndex;
+      saveState();
+      goBack("playerboard");
+    });
+    appEl.querySelector("#deal-next")?.addEventListener("click", () => {
+      state.playerBoardIndex = figurePbIndex;
+      saveState();
+      go("playerboard");
     });
   }
   function escapeAttr(s) {
@@ -5195,6 +5890,7 @@
   }
   var _setupEnterBoard = false;
   var _setupEnterCoach = false;
+  var _setupMainDeckPlaced = false;
   var _setupDeckCoachPhase = 0;
   var SETUP_DECK_COACH_LAST = 10;
   var SETUP_CARD_TOKEN_TERRAINS = ["forest", "water", "mountain"];
@@ -5208,7 +5904,7 @@
     { slot: 5, id: "events", name: "Zdarzenia", art: "" }
   ];
   var SETUP_EXPLORE_SLOTS = SETUP_EXPLORE_DECKS.map((d) => d.slot);
-  var SETUP_PREP_BEFORE_MONSTERS = /* @__PURE__ */ new Set(["intro", "board", "action-deck"]);
+  var SETUP_PREP_BEFORE_MONSTERS = /* @__PURE__ */ new Set(["intro", "board", "action-deck", "map-pawns"]);
   function leaveCoachThen(next, { keepDeals = false } = {}) {
     const coach = appEl.querySelector(".setup-coach");
     const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -5216,7 +5912,10 @@
       next();
       return;
     }
-    if (coach.classList.contains("is-leaving")) return;
+    if (coach.classList.contains("is-leaving")) {
+      window.setTimeout(next, keepDeals ? 160 : 280);
+      return;
+    }
     coach.classList.add("is-leaving");
     if (!keepDeals) {
       appEl.querySelector(".setup-head h1")?.classList.add("is-title-leaving");
@@ -5236,7 +5935,9 @@
     root.classList.add("is-ready", "is-settled-layer", "is-positioned");
     root.classList.remove("is-leaving");
     root.querySelectorAll(".setup-deal-card").forEach((c) => {
+      const horiz = c.classList.contains("setup-deal-card--pool");
       c.classList.add("is-dealt", "is-flipped", "is-settled");
+      if (horiz) c.classList.add("is-slot-horizontal");
     });
     root.querySelectorAll(
       ".setup-loc-token-chip, .setup-monster-token-chip, .setup-gold-chip, .setup-die-chip, .setup-area-card-chip, .setup-spawn-token-chip"
@@ -5248,7 +5949,7 @@
   function coachDealBuilders() {
     return {
       1: () => `<div class="setup-deal setup-deal--zero" id="setup-deal-zero" data-slots="zero" aria-hidden="true">${setupDealCardsHtml(
-        { costs: [0, 0, 0] }
+        { costs: [0, 0, 0], useCommonBack: true }
       )}</div>`,
       2: () => `<div class="setup-deal setup-deal--rest" id="setup-deal-rest" data-slots="rest" aria-hidden="true">${setupDealCardsHtml(
         { costs: [1, 2, 1] }
@@ -5353,6 +6054,13 @@
     const text = coach.querySelector(".setup-coach-text");
     if (kicker) kicker.textContent = copy.kicker;
     if (text) text.innerHTML = copy.text;
+    const sideTile = appEl.querySelector("#setup-coach-side-tile");
+    if (sideTile) {
+      const sideKicker = sideTile.querySelector(".setup-coach-kicker");
+      const sideText = sideTile.querySelector(".setup-coach-text");
+      if (sideKicker) sideKicker.textContent = copy.kicker;
+      if (sideText) sideText.innerHTML = copy.text;
+    }
     coach.classList.remove("is-leaving");
     preview.querySelectorAll(
       ".is-coach-target, .is-coach-deck, .is-coach-filled, .is-coach-leaving"
@@ -5381,7 +6089,14 @@
       else {
         node.classList.remove("is-settled-layer", "is-positioned", "is-ready", "is-leaving");
         node.querySelectorAll(".setup-deal-card").forEach((c) => {
-          c.classList.remove("is-dealt", "is-flipped", "is-settled");
+          c.classList.remove(
+            "is-dealt",
+            "is-flipped",
+            "is-settled",
+            "is-slot-horizontal",
+            "is-landing",
+            "is-seating"
+          );
         });
         node.querySelectorAll(
           ".setup-loc-token-chip, .setup-monster-token-chip, .setup-gold-chip, .setup-die-chip, .setup-area-card-chip, .setup-spawn-token-chip"
@@ -5476,8 +6191,8 @@
       };
     }
     return {
-      kicker: "Talia akcji",
-      text: `Po\u0142\xF3\u017C <strong>zakryt\u0105 tali\u0119</strong> na pierwszym polu od g\xF3ry w prawej kolumnie (7 kart) \u2014 zaznaczone rombem.`
+      kicker: "Wsp\xF3lna talia akcji",
+      text: `Przetasuj <strong>wsp\xF3lne karty akcji</strong> \u2014 <strong>${COMMON_ACTION_DECK_CARD_COUNT} kart</strong>. Nast\u0119pnie po\u0142\xF3\u017C je <strong>zakryte</strong> na odpowiednim polu.`
     };
   }
   function setupDeckCoachTitle(phase, fallback) {
@@ -5656,17 +6371,86 @@
     ).join("")}
     </div>`;
   }
-  function setupDealCardsHtml({ costs, settled = false }) {
+  function applyMainDeckLandedState(root, { stackOnSlot = true } = {}) {
+    if (!root) return;
+    const cards = [...root.querySelectorAll(".setup-deal-card--main-deck")];
+    cards.forEach((c, i) => {
+      c.classList.add("is-dealt", "is-settled", "is-slot-horizontal");
+      c.classList.remove("is-landing");
+      if (stackOnSlot && i < cards.length - 1) c.classList.add("is-stack-hidden");
+    });
+    appEl.querySelector(".setup-screen")?.classList.add("setup-screen--main-deck-settled");
+    if (!_setupMainDeckPlaced) {
+      _setupMainDeckPlaced = true;
+      queryActionDeckSlot2(appEl)?.classList.add("is-coach-deck");
+    }
+  }
+  function settleMainDeckRoot(root) {
+    if (!root) return;
+    root.classList.add("is-ready", "is-settled-layer", "is-positioned", "is-idle");
+    root.classList.remove("is-leaving", "is-shuffling", "is-flying", "is-seating", "is-loop-out");
+    applyMainDeckLandedState(root);
+  }
+  function resetMainDeckCycle(dealRoot, cards, { keepSvgSettled = false } = {}) {
+    unmountMainDeckToOverlay(
+      appEl.querySelector(".setup-board-preview--coach"),
+      dealRoot
+    );
+    if (!keepSvgSettled) {
+      appEl.querySelector(".setup-screen")?.classList.remove("setup-screen--main-deck-settled");
+    }
+    dealRoot.classList.remove(
+      "is-settled-layer",
+      "is-positioned",
+      "is-seating",
+      "is-flying",
+      "is-shuffling",
+      "is-loop-out",
+      "is-deck-entering",
+      "is-deck-entered"
+    );
+    cards.forEach((c) => {
+      c.classList.remove(
+        "is-dealt",
+        "is-settled",
+        "is-seated",
+        "is-landing",
+        "is-stack-hidden",
+        "is-slot-horizontal",
+        "is-seating",
+        "is-seated-visual",
+        "is-loop-out"
+      );
+    });
+  }
+  function setupMainDeckStackHtml({ settled = false } = {}) {
+    const v = COMMON_ACTION_DECK_ASSET_V;
+    const back = COMMON_ACTION_DECK_BACK_SRC;
+    const cards = Array.from({ length: COMMON_ACTION_DECK_STACK_SIZE }, (_, i) => `
+        <div class="setup-deal-card setup-deal-card--main-deck setup-deal-card--portrait${settled ? " is-dealt is-settled is-slot-horizontal" : ""}" data-deal="${i}" style="--stack-i: ${i}">
+          <div class="setup-deal-card__inner setup-deal-card__inner--back-only">
+            <div class="setup-deal-card__face setup-deal-card__face--scan setup-deal-card__face--portrait" aria-hidden="true">
+              <img src="${back}?v=${v}" alt="" decoding="async" />
+            </div>
+          </div>
+        </div>`).join("");
+    return `<div class="setup-deal setup-deal--main-deck${dealRootClass(settled)}${settled ? " is-positioned" : ""}" id="setup-deal-main-deck" aria-hidden="true">${cards}</div>`;
+  }
+  function setupDealCardsHtml({ costs, settled = false, useCommonBack = false } = {}) {
+    const v = COMMON_ACTION_DECK_ASSET_V;
+    const back = COMMON_ACTION_DECK_BACK_SRC;
     return costs.map(
       (cost, i) => `
-        <div class="setup-deal-card${settled ? " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
+        <div class="setup-deal-card${useCommonBack ? " setup-deal-card--pool setup-deal-card--portrait" : ""}${settled ? useCommonBack ? " is-dealt is-flipped is-slot-horizontal is-settled" : " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
+          ${useCommonBack ? `<div class="setup-deal-card__rot">` : ""}
           <div class="setup-deal-card__inner">
-            <div class="setup-deal-card__face setup-deal-card__face--back" aria-hidden="true"></div>
+            <div class="setup-deal-card__face setup-deal-card__face--back${useCommonBack ? " setup-deal-card__face--scan" : ""}" aria-hidden="true">${useCommonBack ? `<img src="${back}?v=${v}" alt="" decoding="async" />` : ""}</div>
             <div class="setup-deal-card__face setup-deal-card__face--front">
               <span class="setup-deal-card__cost">${cost}</span>
               <span class="setup-deal-card__label">koszt</span>
             </div>
           </div>
+          ${useCommonBack ? `</div>` : ""}
         </div>`
     ).join("");
   }
@@ -5693,20 +6477,41 @@
         state.roster[0].resourcesApplied = true;
       }
     }
+    if (step.id === "map-pawns") {
+      (state.roster || []).forEach((p) => {
+        placeAtSchool(p, { force: true });
+        p.reputation = 0;
+      });
+      ensureReputationClaims(state.board, state.roster);
+    }
+    const mapPawnsMain = step.id === "map-pawns" ? `
+      <div class="setup-map-pawns-layout">
+        ${mapPawnsPrepPanelHtml({ roster: state.roster })}
+        <div class="setup-map-embed setup-map-embed--pawns">
+          ${mapSvgHtml(state.board || defaultBoard(), state.roster, {
+      schoolById: schoolById3,
+      setupPreview: true,
+      setupMapPawns: true
+    })}
+        </div>
+      </div>` : "";
     const monsterMap = step.id === "monsters" ? `
       <div class="setup-monsters-grid">
         <div class="setup-map-embed">
           <h3>Oznacz potwory (numery z \u017Ceton\xF3w)</h3>
           <p class="lead">Dla lasu, g\xF3r i wody podaj numer obszaru z odkrytego \u017Cetonu \u2014 strza\u0142kami albo wpisz. Potem ustaw poziom.</p>
-          ${mapSvgHtml(state.board, state.roster, { schoolById })}
+          ${mapSvgHtml(state.board, state.roster, { schoolById: schoolById3 })}
         </div>
         <div class="setup-monsters-panel-wrap">
           ${monstersPanelHtml(state.board)}
         </div>
       </div>` : "";
-    const showBoardMap = step.id === "board" || step.id === "action-deck";
+    const showBoardMap = step.id === "board" || step.id === "action-deck" || step.id === "map-pawns";
     const showDeckCoach = step.id === "action-deck";
-    if (!showDeckCoach) _setupDeckCoachPhase = 0;
+    if (!showDeckCoach) {
+      _setupDeckCoachPhase = 0;
+      _setupMainDeckPlaced = false;
+    }
     const coachPhase = showDeckCoach ? _setupDeckCoachPhase : 0;
     const coachCopy = setupDeckCoachCopy(coachPhase);
     const coachTitle = setupDeckCoachTitle(coachPhase, step.title);
@@ -5724,7 +6529,7 @@
     const boardPreview = showBoardMap ? `
       <div class="setup-board-preview${showDeckCoach ? " setup-board-preview--coach" : ""}${dealActive ? " setup-board-preview--deal" : ""}${exploreActive ? " setup-board-preview--explore" : ""}${notchActive ? " setup-board-preview--elixir" : ""}${topActive ? " setup-board-preview--monsters" : ""}${monsterSpawnActive ? " setup-board-preview--spawn" : ""}" ${showDeckCoach ? "" : 'aria-hidden="true"'}>
         ${mapSvgHtml(state.board || defaultBoard(), state.roster, {
-      schoolById,
+      schoolById: schoolById3,
       setupCoachPhase: showDeckCoach ? coachPhase : null,
       setupPreview: showBoardMap
     })}
@@ -5733,12 +6538,20 @@
                   <p class="setup-coach-kicker">${coachCopy.kicker}</p>
                   <p class="setup-coach-text">${coachCopy.text}</p>
                 </div>
+                <div class="setup-coach-side-tile" id="setup-coach-side-tile" role="note" aria-label="Wskaz\xF3wka">
+                  <p class="setup-coach-kicker">${coachCopy.kicker}</p>
+                  <p class="setup-coach-text">${coachCopy.text}</p>
+                </div>
                 <svg class="setup-coach-arrow" id="setup-coach-arrow" aria-hidden="true"></svg>
               </div>
+              ${setupMainDeckStackHtml({
+      settled: coachPhase > 0 || _setupMainDeckPlaced
+    })}
               ${coachPhase >= 1 ? `<div class="setup-deal setup-deal--zero${dealRootClass(coachPhase > 1)}" id="setup-deal-zero" data-slots="zero" aria-hidden="true">
                       ${setupDealCardsHtml({
       costs: [0, 0, 0],
-      settled: coachPhase > 1
+      settled: coachPhase > 1,
+      useCommonBack: true
     })}
                     </div>` : ""}
               ${coachPhase >= 2 ? `<div class="setup-deal setup-deal--rest${dealRootClass(coachPhase > 2)}" id="setup-deal-rest" data-slots="rest" aria-hidden="true">
@@ -5766,35 +6579,38 @@
       step.id === "intro" ? "setup-screen--intro" : "",
       step.id === "board" ? "setup-screen--board-step" : "",
       step.id === "action-deck" ? "setup-screen--coach-flow" : "",
+      showDeckCoach && coachPhase === 0 ? "setup-screen--coach-phase-0" : "",
       enterBoard ? "setup-screen--enter-board" : "",
       enterCoach ? "setup-screen--enter-coach" : "",
+      showDeckCoach && (coachPhase > 0 || _setupMainDeckPlaced) ? "setup-screen--main-deck-settled" : "",
       dealActive ? "setup-screen--deal-zero" : "",
       exploreActive ? "setup-screen--explore-decks" : "",
       notchActive ? "setup-screen--elixir-deck" : "",
       topActive ? "setup-screen--monster-stacks" : "",
       monsterSpawnActive ? "setup-screen--coach-spawn" : "",
-      step.id === "monsters" ? "setup-screen--monsters" : ""
+      step.id === "monsters" ? "setup-screen--monsters" : "",
+      step.id === "map-pawns" ? "setup-screen--map-pawns" : ""
     ].filter(Boolean).join(" ");
     shell(`
     <section class="panel setup-screen${screenMods ? ` ${screenMods}` : ""}">
       <div class="setup-stack">
-        <header class="setup-head">
-          <div class="progress setup-progress">
+        <header class="setup-head${isPrepBeforeMonsters ? " setup-head--prep-hero" : ""}">
+          ${isPrepBeforeMonsters ? "" : `<div class="progress setup-progress">
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
-          </div>
+          </div>`}
           <h1>${coachTitle}</h1>
           <div class="home-hero-rule" aria-hidden="true"></div>
         </header>
 
         <div class="setup-main${showBoardMap ? " setup-main--board" : ""}${step.id === "monsters" ? " setup-main--monsters" : ""}">
-          ${showDeckCoach ? "" : `<div class="step-body">${step.body}</div>`}
-          ${boardPreview}
+          ${showDeckCoach ? "" : step.id === "map-pawns" ? mapPawnsMain : String(step.body || "").trim() ? `<div class="step-body">${step.body}</div>` : ""}
+          ${step.id === "map-pawns" ? "" : boardPreview}
           ${monsterMap}
         </div>
 
-        <div class="actions setup-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="prev">Wstecz</button>
-          ${step.nextMode === "turn" ? `<button type="button" class="btn btn-primary" id="to-turn">Prowad\u017A pierwsz\u0105 tur\u0119</button>` : `<button type="button" class="btn btn-primary" id="next">Zrobione \u2014 dalej</button>`}
+          ${step.nextMode === "turn" ? `<button type="button" class="btn btn-primary" id="to-turn">Dalej</button>` : `<button type="button" class="btn btn-primary" id="next">Dalej</button>`}
         </div>
       </div>
     </section>
@@ -5809,7 +6625,10 @@
     if (prev) {
       prev.addEventListener("click", () => {
         if (index === 0) {
-          leavePanelThen(() => go(isSolo() ? "roster" : "order"));
+          const pbSteps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
+          state.playerBoardIndex = playerBoardStepIndex(pbSteps, "figure-ring");
+          saveState();
+          goBack("playerboard");
           return;
         }
         if (step.id === "action-deck" && _setupDeckCoachPhase > 0) {
@@ -5828,12 +6647,10 @@
         const after = () => {
           _setupDeckCoachPhase = 0;
           state.setupIndex = index - 1;
-          saveState();
-          render();
-          window.scrollTo({ top: 0, behavior: "smooth" });
         };
-        if (fromCoach) leaveCoachThen(after);
-        else leavePanelThen(after);
+        const goPrevStep = () => transitionRender(after, { direction: "back" });
+        if (fromCoach) leaveCoachThen(goPrevStep);
+        else goPrevStep();
       });
     }
     if (next) {
@@ -5867,14 +6684,16 @@
           if (toCoach) {
             _setupDeckCoachPhase = 0;
             _setupEnterCoach = true;
+            _setupMainDeckPlaced = false;
           }
           if (step.id === "action-deck") _setupDeckCoachPhase = 0;
+        };
+        if (toCoach) {
+          after();
           saveState();
           render();
           window.scrollTo({ top: 0, behavior: "smooth" });
-        };
-        if (toCoach) after();
-        else leavePanelThen(after);
+        } else transitionRender(after);
       });
     }
     if (toTurn) {
@@ -5882,7 +6701,7 @@
         applyStartResources(state.roster, state.players, { force: true });
         state.activeIndex = 0;
         state.turnNumber = 1;
-        leavePanelThen(() => go("turn", { turn: { phase: "hub", screen: "hub" } }));
+        go("turn", { turn: { phase: "hub", screen: "hub" } });
       });
     }
     if (showDeckCoach) {
@@ -5897,7 +6716,7 @@
     const bindGen = ++_coachBindGen;
     _coachResizeAbort?.abort();
     _coachResizeAbort = new AbortController();
-    const deck = preview.querySelector('.map-card-slot[data-slot="6"]');
+    const deck = queryActionDeckSlot2(preview);
     const slotsOf = (ids) => ids.map((i) => preview.querySelector(`.map-card-slot[data-slot="${i}"]`)).filter(Boolean);
     const zeroSlots = slotsOf(SETUP_POOL_ZERO_SLOTS);
     const restSlots = slotsOf(SETUP_POOL_REST_SLOTS);
@@ -5917,14 +6736,41 @@
     const highlight = phase === 10 ? [...spawnCardSlots, ...spawnLocNodes] : phase === 9 ? cardTokenSlots : phase === 8 ? [...goldBank ? [goldBank] : [], ...diceTray ? [diceTray] : [], ...dieSlots] : phase === 7 ? [...locTokenSlots, ...fightSlot ? [fightSlot] : []] : phase === 6 ? [...monsterCardSlots, ...monsterTokenSlots] : phase === 5 ? trophySlot ? [trophySlot] : [] : phase === 4 ? elixirSlot ? [elixirSlot] : [] : phase === 3 ? exploreSlots : phase === 2 ? restSlots : phase === 1 ? zeroSlots : deck ? [deck] : [];
     if (!highlight.length) return;
     highlight.forEach((t) => t.classList.add("is-coach-target"));
-    if (phase >= 1 && phase <= 2 && deck) deck.classList.add("is-coach-deck");
+    if (phase >= 1 && phase <= 2 && deck || _setupMainDeckPlaced) {
+      deck?.classList.add("is-coach-deck");
+    }
     if (phase >= 2) {
       zeroSlots.forEach((t) => t.classList.add("is-coach-filled"));
     }
     if (phase >= 3) {
       restSlots.forEach((t) => t.classList.add("is-coach-filled"));
     }
+    const layoutCoachSideTile = () => {
+      const tile = appEl.querySelector("#setup-coach-side-tile");
+      if (!tile || phase !== 0) return;
+      const pr = preview.getBoundingClientRect();
+      if (pr.width < 8) return;
+      const mapFace = preview.querySelector(".map-board-face");
+      const united = preview.querySelector(".map-board-united") || preview.querySelector(".map-svg");
+      const board = united?.getBoundingClientRect();
+      const mapTopRef = mapFace?.getBoundingClientRect() ?? board;
+      if (!board || !mapTopRef) return;
+      const gap = 10;
+      const pad = 6;
+      const boardRightInPreview = board.right - pr.left;
+      const left = boardRightInPreview + gap;
+      const tileW = Math.max(148, pr.width - pad - left);
+      const top = mapTopRef.top - pr.top;
+      tile.style.width = `${tileW}px`;
+      tile.style.left = `${left}px`;
+      tile.style.top = `${top}px`;
+    };
     const placeBubble = (anchorEl) => {
+      if (phase === 0) {
+        layoutCoachSideTile();
+        arrow.innerHTML = "";
+        return null;
+      }
       const pr = preview.getBoundingClientRect();
       const tr = anchorEl.getBoundingClientRect();
       if (pr.width < 8 || tr.width < 2) return null;
@@ -5980,8 +6826,294 @@
     `;
       return { pr, tx, ty };
     };
+    const { mapWrap, positionRoot } = mountCoachOverlays(preview);
+    const layoutMainDeck = () => {
+      const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+      const pxRoot = positionRoot || mapWrap;
+      if (!dealRoot || !deck || !pxRoot || !mapWrap) return;
+      const origin = pxRoot.getBoundingClientRect();
+      const svg2 = mapWrap.querySelector(".map-svg");
+      const united = svg2?.querySelector(".map-board-united");
+      const boardEl = united || svg2;
+      const boardScreen = boardEl?.getBoundingClientRect();
+      const svgAnchored = isMainDeckSvgAnchored(dealRoot);
+      const foHost = dealRoot.parentElement?.classList?.contains("map-action-deck-fo-host") ? dealRoot.parentElement : null;
+      const box = svgAnchored && foHost ? { left: 0, top: 0, width: foHost.clientWidth, height: foHost.clientHeight } : measureActionDeckLipBox(pxRoot, preview);
+      if (!box || !svgAnchored && origin.width < 8 || box.width < 2 || !boardScreen?.width) return;
+      const aspect = ACTION_CARD_ASPECT_W / ACTION_CARD_ASPECT_H;
+      const gap = 10;
+      const pad = 6;
+      const landW = box.width;
+      const landH = box.height;
+      const { fitRotW, fitRotH } = htmlCardFitVarsForLip(box);
+      const x1 = svgAnchored ? 0 : box.left;
+      const y1 = svgAnchored ? 0 : box.top;
+      const mapFace = svg2?.querySelector(".map-board-face");
+      const mapFaceScreen = mapFace?.getBoundingClientRect();
+      const boardTop = boardScreen.top - origin.top;
+      const boardLeft = boardScreen.left - origin.left;
+      const boardH = boardScreen.height;
+      const mapTopInLayer = mapFaceScreen ? mapFaceScreen.top - origin.top : boardTop;
+      const mapH = mapFaceScreen?.height ?? boardH;
+      const layerW = origin.width;
+      let portraitH = Math.min(Math.max(156, mapH * 0.9), mapH - 6);
+      portraitH = Math.min(portraitH, 300);
+      let portraitW = portraitH * aspect;
+      const maxStackW = Math.max(48, layerW - 2 * pad);
+      if (portraitW > maxStackW) {
+        portraitW = maxStackW;
+        portraitH = portraitW / aspect;
+      }
+      const roomLeftOfBoard = boardLeft - gap - pad;
+      let x0Base = pad;
+      if (roomLeftOfBoard >= portraitW * 0.92) {
+        x0Base = boardLeft - portraitW - gap;
+      } else if (roomLeftOfBoard >= 40) {
+        portraitW = Math.min(portraitW, roomLeftOfBoard);
+        portraitH = portraitW / aspect;
+        x0Base = boardLeft - portraitW - gap;
+      }
+      x0Base = Math.max(pad, Math.min(x0Base, layerW - portraitW - pad));
+      const y0Base = mapTopInLayer;
+      [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")].forEach((card, i) => {
+        const fanX = i * 0.55;
+        const fanY = i * -1.35;
+        card.style.setProperty("--w", `${portraitW}px`);
+        card.style.setProperty("--h", `${portraitH}px`);
+        card.style.setProperty("--w1", `${landW}px`);
+        card.style.setProperty("--h1", `${landH}px`);
+        card.style.setProperty("--x0", `${x0Base + fanX}px`);
+        card.style.setProperty("--y0", `${y0Base + fanY}px`);
+        card.style.setProperty("--x-enter", `${x0Base + fanX - portraitW - 96}px`);
+        card.style.setProperty("--y-enter", `${y0Base + fanY}px`);
+        card.style.setProperty("--x1", `${x1}px`);
+        card.style.setProperty("--y1", `${y1}px`);
+        card.style.setProperty("--x1-fly", `${x1 + landW / 2 - portraitW / 2}px`);
+        card.style.setProperty("--y1-fly", `${y1 + landH / 2 - portraitH / 2}px`);
+        const seatScale = mainDeckSeatScaleForPortraitInLip(
+          { width: landW, height: landH },
+          portraitW,
+          portraitH
+        );
+        card.style.setProperty("--seat-scale", `${seatScale}`);
+        card.style.setProperty("--fit-rot-h", `${fitRotH}px`);
+        card.style.setProperty("--fit-rot-w", `${fitRotW}px`);
+        card.style.zIndex = String(24 + i);
+      });
+    };
+    const sleep3 = (ms) => new Promise((r) => window.setTimeout(r, ms));
+    const runMainDeckEnter = () => {
+      const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+      if (!dealRoot) return;
+      if (dealRoot.classList.contains("is-settled-layer") && _setupDeckCoachPhase !== 0) return;
+      const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) {
+        layoutMainDeck();
+        settleMainDeckRoot(dealRoot);
+        return;
+      }
+      if (dealRoot.dataset.enterRunning === "1") return;
+      dealRoot.dataset.enterRunning = "1";
+      const cards = [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")];
+      const runShufflePass = () => new Promise((resolve) => {
+        dealRoot.classList.remove("is-shuffling");
+        void dealRoot.offsetWidth;
+        dealRoot.classList.add("is-shuffling");
+        window.setTimeout(resolve, 860);
+      });
+      const waitFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const runFlyToSlot = () => new Promise((resolve) => {
+        layoutMainDeck();
+        dealRoot.classList.add("is-flying");
+        cards.forEach(
+          (c) => c.classList.remove("is-dealt", "is-settled", "is-landing", "is-stack-hidden", "is-slot-horizontal", "is-seating")
+        );
+        cards.forEach((card, i) => {
+          window.setTimeout(
+            () => card.classList.add("is-dealt", "is-landing"),
+            20 + i * 22
+          );
+        });
+        window.setTimeout(() => {
+          layoutMainDeck();
+          cards.forEach((c) => c.classList.remove("is-landing"));
+          dealRoot.classList.remove("is-flying");
+          resolve();
+        }, 800);
+      });
+      const runSeatOnSlot = () => new Promise((resolve) => {
+        const reduceSeat = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        layoutMainDeck();
+        const topCard = cards[cards.length - 1];
+        if (!topCard) {
+          resolve();
+          return;
+        }
+        cards.forEach((c) => {
+          if (c !== topCard) c.classList.add("is-stack-hidden");
+        });
+        if (reduceSeat) {
+          resolve();
+          return;
+        }
+        dealRoot.classList.add("is-seating");
+        void topCard.offsetWidth;
+        requestAnimationFrame(() => {
+          topCard.classList.add("is-seating");
+        });
+        window.setTimeout(() => {
+          dealRoot.classList.remove("is-seating");
+          topCard.classList.remove("is-seating");
+          topCard.classList.add("is-seated-visual");
+          resolve();
+        }, 760);
+      });
+      const prepareDeckFromLeft = () => new Promise((resolve) => {
+        const screen = appEl.querySelector(".setup-screen");
+        resetMainDeckCycle(dealRoot, cards, { keepSvgSettled: true });
+        layoutMainDeck();
+        dealRoot.classList.add("is-idle", "is-ready", "is-deck-entering");
+        dealRoot.classList.remove("is-deck-entered");
+        void dealRoot.offsetWidth;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            screen?.classList.remove("setup-screen--main-deck-settled");
+            dealRoot.classList.add("is-deck-entered");
+            window.setTimeout(() => {
+              dealRoot.classList.remove("is-deck-entering", "is-deck-entered");
+              resolve();
+            }, 720);
+          });
+        });
+      });
+      (async () => {
+        dealRoot.classList.remove("is-settled-layer", "is-positioned");
+        while (bindGen === _coachBindGen && _setupDeckCoachPhase === 0) {
+          await prepareDeckFromLeft();
+          await waitFrame();
+          for (let pass = 0; pass < 3; pass++) {
+            if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+            await runShufflePass();
+          }
+          if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+          dealRoot.classList.remove("is-shuffling");
+          await runFlyToSlot();
+          await runSeatOnSlot();
+          await waitFrame();
+          applyMainDeckLandedState(dealRoot);
+          await sleep3(1700);
+          if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+        }
+        if (bindGen === _coachBindGen && _setupDeckCoachPhase === 0) {
+          layoutMainDeck();
+          settleMainDeckRoot(dealRoot);
+        }
+        delete dealRoot.dataset.enterRunning;
+      })();
+    };
+    const layoutZeroPoolGroup = (dealRoot, targetSlots) => {
+      if (!dealRoot || !deck || !targetSlots.length || !positionRoot) return;
+      const deckBox = measureActionDeckLipBox(positionRoot, preview) || measureSlotBoxInLayer(positionRoot, deck, { metric: "lip" });
+      if (!deckBox?.width) return;
+      [...dealRoot.querySelectorAll(".setup-deal-card--pool")].forEach((card, i) => {
+        const slot = targetSlots[i];
+        if (!slot) return;
+        const slotBox = measureSlotBoxInLayer(positionRoot, slot, { metric: "lip" });
+        if (!slotBox?.width) return;
+        const landW = slotBox.width;
+        const landH = slotBox.height;
+        const { unrotated } = cardFitInLipRect({
+          x: 0,
+          y: 0,
+          w: landW,
+          h: landH
+        });
+        const portraitW = unrotated.w;
+        const portraitH = unrotated.h;
+        const fanX = i * 1.2;
+        const fanY = i * -0.9;
+        const x0 = deckBox.left + deckBox.width / 2 - portraitW / 2 + fanX;
+        const y0 = deckBox.top - portraitH * 0.72 + fanY;
+        const x1 = slotBox.left;
+        const y1 = slotBox.top;
+        const x1Fly = slotBox.left + slotBox.width / 2 - portraitW / 2;
+        const y1Fly = slotBox.top + slotBox.height / 2 - portraitH / 2;
+        const seatScale = mainDeckSeatScaleForPortraitInLip(
+          { width: landW, height: landH },
+          portraitW,
+          portraitH
+        );
+        const { fitRotW, fitRotH } = htmlCardFitVarsForLip({ width: landW, height: landH });
+        card.style.setProperty("--w", `${portraitW}px`);
+        card.style.setProperty("--h", `${portraitH}px`);
+        card.style.setProperty("--w1", `${landW}px`);
+        card.style.setProperty("--h1", `${landH}px`);
+        card.style.setProperty("--x0", `${x0}px`);
+        card.style.setProperty("--y0", `${y0}px`);
+        card.style.setProperty("--x1", `${x1}px`);
+        card.style.setProperty("--y1", `${y1}px`);
+        card.style.setProperty("--x1-fly", `${x1Fly}px`);
+        card.style.setProperty("--y1-fly", `${y1Fly}px`);
+        card.style.setProperty("--seat-scale", `${seatScale}`);
+        card.style.setProperty("--fit-rot-w", `${fitRotW}px`);
+        card.style.setProperty("--fit-rot-h", `${fitRotH}px`);
+        card.style.zIndex = String(32 + i);
+      });
+    };
+    const runZeroPoolDeal = () => {
+      const dealRoot = appEl.querySelector("#setup-deal-zero");
+      if (!dealRoot || dealRoot.classList.contains("is-settled-layer")) return;
+      const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const cards = [...dealRoot.querySelectorAll(".setup-deal-card--pool")].filter(
+        (c) => !c.classList.contains("is-settled") && !c.classList.contains("is-dealt")
+      );
+      layoutZeroPoolGroup(dealRoot, zeroSlots);
+      if (reduce) {
+        cards.forEach(
+          (c) => c.classList.add("is-dealt", "is-flipped", "is-slot-horizontal", "is-settled")
+        );
+        dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned");
+        return;
+      }
+      if (!cards.length) return;
+      dealRoot.classList.add("is-ready");
+      dealRoot.classList.remove("is-settled-layer", "is-flying", "is-seating");
+      (async () => {
+        for (let i = 0; i < cards.length; i++) {
+          if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 1) break;
+          const card = cards[i];
+          layoutZeroPoolGroup(dealRoot, zeroSlots);
+          dealRoot.classList.add("is-flying");
+          card.classList.add("is-dealt", "is-landing");
+          await sleep3(540);
+          dealRoot.classList.remove("is-flying");
+          card.classList.remove("is-landing");
+          card.classList.add("is-flipped");
+          await sleep3(480);
+          layoutZeroPoolGroup(dealRoot, zeroSlots);
+          dealRoot.classList.add("is-seating");
+          void card.offsetWidth;
+          requestAnimationFrame(() => {
+            card.classList.add("is-seating", "is-slot-horizontal");
+          });
+          await sleep3(760);
+          dealRoot.classList.remove("is-seating");
+          card.classList.remove("is-seating");
+          card.classList.add("is-settled");
+          await sleep3(140);
+        }
+        if (bindGen === _coachBindGen && _setupDeckCoachPhase === 1) {
+          dealRoot.classList.add("is-settled-layer", "is-positioned");
+          dealRoot.classList.remove("is-flying", "is-seating");
+        }
+      })();
+    };
     const layoutDealGroup = (dealRoot, targetSlots) => {
       if (!dealRoot || !deck || !targetSlots.length) return;
+      if (dealRoot.id === "setup-deal-zero") {
+        layoutZeroPoolGroup(dealRoot, targetSlots);
+        return;
+      }
       const pr = preview.getBoundingClientRect();
       const dr = deck.getBoundingClientRect();
       if (pr.width < 8 || dr.width < 2) return;
@@ -6194,6 +7326,8 @@
       });
     };
     const layoutAll = () => {
+      layoutMainDeck();
+      if (phase === 0) layoutCoachSideTile();
       layoutDealGroup(appEl.querySelector("#setup-deal-zero"), zeroSlots);
       layoutDealGroup(appEl.querySelector("#setup-deal-rest"), restSlots);
       layoutDealGroup(appEl.querySelector("#setup-deal-explore"), exploreSlots);
@@ -6341,7 +7475,7 @@
       window.setTimeout(() => syncCoachLayout(), 440);
     };
     if (phase === 1) {
-      afterLayout(() => runDealGroup(appEl.querySelector("#setup-deal-zero")));
+      afterLayout(() => runZeroPoolDeal());
     } else if (phase === 2) {
       afterLayout(() => runDealGroup(appEl.querySelector("#setup-deal-rest")));
     } else if (phase === 3) {
@@ -6362,6 +7496,8 @@
       afterLayout(() => runMonsterSpawn());
     } else if (phase > 1) {
       afterLayout();
+    } else if (phase === 0) {
+      afterLayout(() => runMainDeckEnter());
     } else {
       requestAnimationFrame(() => syncCoachLayout());
     }
@@ -6392,7 +7528,7 @@
     ];
     const active = state.turn.phase;
     const p = activePlayer();
-    const school = schoolById(p.schoolId);
+    const school = schoolById3(p.schoolId);
     shell(`
     <section class="panel">
       <div class="badge-row">
@@ -6501,7 +7637,7 @@
     }
     const stage = embed.querySelector(".map-stage");
     if (stage) {
-      stage.outerHTML = mapSvgHtml(state.board, state.roster, { schoolById });
+      stage.outerHTML = mapSvgHtml(state.board, state.roster, { schoolById: schoolById3 });
     } else {
       render();
       return;
@@ -6770,7 +7906,7 @@
         (r, i) => `
              <button class="choice ${i === state.activeIndex ? "active" : ""}" data-active="${i}">
                <strong>${escapeHtml4(r.name)}</strong>
-               <span>${schoolById(r.schoolId).name}${i === 0 ? " \xB7 pierwszy" : ""}</span>
+               <span>${schoolById3(r.schoolId).name}${i === 0 ? " \xB7 pierwszy" : ""}</span>
              </button>`
       ).join("")}
          </div>`;
@@ -6844,7 +7980,7 @@
         `
         <p class="lead"><strong>${escapeHtml4(p.name)}</strong> \xB7 kliknij s\u0105siada (z\u0142ota obw\xF3dka). Opis wyskoczy nad map\u0105 \u2014 bez prze\u0142adowania strony.</p>
         ${mapSvgHtml(state.board, state.roster, {
-          schoolById,
+          schoolById: schoolById3,
           highlightFromId: fromId,
           popupHtml: popupInner
         })}
@@ -7370,7 +8506,7 @@
         solo ? `Podsumowanie \xB7 tura ${state.turnNumber || 1}` : "Podsumowanie tury",
         turnSummaryHtml(p, {
           phase3Hint: hint,
-          schoolName: schoolById(p.schoolId).short,
+          schoolName: schoolById3(p.schoolId).short,
           turnNumber: state.turnNumber || 1,
           isSolo: solo
         })
@@ -7402,7 +8538,7 @@
       <h2>Mapa (schemat)</h2>
       ${mapToolbarHtml(board, state.roster)}
       ${mapSvgHtml(board, state.roster, {
-      schoolById,
+      schoolById: schoolById3,
       highlightFromId: board.highlightFrom || board.movePrompt?.fromId || (activePlayer()?.nowDoing === "faza1" ? activePlayer()?.locationId : null)
     })}
       ${selectedLocPanel(board, state.roster)}
@@ -7420,7 +8556,7 @@
       <h2>Gracze \u2014 reputacja i karty</h2>
       <div class="tracker-list">
         ${playerTrackerHtml(state.roster, {
-      schoolById,
+      schoolById: schoolById3,
       isSolo: isSolo(),
       activeIndex: state.activeIndex,
       START_RESOURCES,
@@ -7625,7 +8761,7 @@
   }
   function resourcesTable(n) {
     const rows = START_RESOURCES[n].map((r, i) => {
-      const who = state.roster[i] ? `${escapeHtml4(state.roster[i].name)} (${schoolById(state.roster[i].schoolId).short})` : n === 1 ? "Ty (solo)" : PLAYER_LABELS[i];
+      const who = state.roster[i] ? `${escapeHtml4(state.roster[i].name)} (${schoolById3(state.roster[i].schoolId).short})` : n === 1 ? "Ty (solo)" : PLAYER_LABELS[i];
       return `<tr><th>${who}</th><td>${r.cards} kart(y)</td><td>${r.gold} z\u0142ota</td></tr>`;
     }).join("");
     return `<table class="table"><thead><tr><th>Gracz</th><th>Karty</th><th>Z\u0142oto</th></tr></thead><tbody>${rows}</tbody></table>`;

@@ -119,6 +119,11 @@ function buildSoloSetupSteps(player) {
       `,
     },
     {
+      id: "map-pawns",
+      title: "Żetony i figurki na mapie",
+      mapPawnsPrep: true,
+    },
+    {
       id: "solo-help",
       title: "Karta pomocy solo",
       body: `
@@ -180,17 +185,6 @@ function escapeLite(s) {
 function buildMultiSetupSteps(n, roster = []) {
   const steps = [
     {
-      id: "intro",
-      title: "Zaczynamy przygotowanie",
-      body: `
-        <div class="badge-row setup-intro-badges">
-          <span class="badge">${n} graczy</span>
-          <span class="badge">Tylko podstawka</span>
-          <span class="badge">Cel: 4 reputacji</span>
-        </div>
-      `,
-    },
-    {
       id: "board",
       title: "Plansza na środku",
       body: ``,
@@ -204,6 +198,11 @@ function buildMultiSetupSteps(n, roster = []) {
       id: "monsters",
       title: "Potwory na start",
       body: buildMonsterSetupHtml(n),
+    },
+    {
+      id: "map-pawns",
+      title: "Żetony i figurki na mapie",
+      mapPawnsPrep: true,
     },
     {
       id: "first-player",
@@ -333,22 +332,17 @@ export function buildPlayerBoardSteps({ playerCount, solo }) {
       body:
         "Wybierz imię wiedźmina z dostępnych<br />i połóż klocki w odpowiednie pola.",
     },
-    solo
-      ? {
-          id: "reputation",
-          focus: "reputation",
-          boardImg: PLAYER_BOARD_MAT_SRC,
-          boardVer: 1,
-          title: "Żeton reputacji",
-          body: "Połóż żeton ze <strong>znakiem szkoły</strong> na najniższym polu toru reputacji — start na <strong>0</strong>.",
-        }
-      : {
-          id: "trophies",
-          focus: "trophies",
-          boardImg: PLAYER_BOARD_MAT_SRC,
-          boardVer: 1,
-          schoolTrophyPrep: true,
-        },
+    ...(solo
+      ? []
+      : [
+          {
+            id: "trophies",
+            focus: "trophies",
+            boardImg: PLAYER_BOARD_MAT_SRC,
+            boardVer: 1,
+            schoolTrophyPrep: true,
+          },
+        ]),
     {
       id: "deck",
       focus: "deck",
@@ -357,32 +351,11 @@ export function buildPlayerBoardSteps({ playerCount, solo }) {
       schoolActionDeckPrep: true,
     },
     {
-      id: "reputation",
-      focus: "reputation",
-      boardImg: PLAYER_BOARD_MAT_SRC,
-      boardVer: 1,
-      title: "Żeton reputacji",
-      body: "Połóż żeton ze <strong>znakiem szkoły</strong> na najniższym polu toru reputacji — start na <strong>0</strong>.",
-      skip: solo,
+      id: "figure-ring",
+      focus: "none",
+      figurePrep: true,
     },
-    {
-      id: "figure",
-      focus: "map",
-      title: "Figurka na mapie",
-      body: "Figurka w kolorze szkoły stoi na <strong>obszarze szkoły</strong> na <strong>środkowej mapie</strong> (ten sam symbol co na planszetce).",
-      hint: "To już nie na planszetce, tylko na stole ze wspólną mapą.",
-    },
-  ].filter((s) => !s.skip);
-
-  steps.push({
-      id: "resources",
-      focus: "full",
-      title: solo ? "Złoto i karty na rękę" : "Koniec — złoto i karty później",
-      body: solo
-        ? `Z banku: ${goldCoinsHtml(3, { size: 30, layout: "stack" })}. Na rękę z talii: ${actionCardsHtml(5, { height: 36, layout: "fan" })}.`
-        : "Złoto i startowe karty bierzesz według kolejności przy stole — za chwilę na ekranie <strong>Kto pierwszy?</strong>.",
-      hint: solo ? "" : "Teraz schowaj do pudełka niewykorzystane zestawy innych graczy.",
-  });
+  ];
 
   return steps;
 }

@@ -1,6 +1,6 @@
 /**
  * Talia startowa na planszetce — ekran poradnika (10 kart, lewe wycięcie talii).
- * Grafiki tasowania: stały zestaw skanów, niezależnie od szkoły na rosterze.
+ * Grafiki tasowania: rewers kart (zakryta talia), niezależnie od szkoły na rosterze.
  */
 
 import { canonicalSchoolId } from "./sources.js";
@@ -10,7 +10,15 @@ export const ACTION_CARD_ASPECT_W = 769;
 export const ACTION_CARD_ASPECT_H = 1175;
 
 /** Wersja cache dla skanów talii startowej */
-export const ACTION_DECK_ASSET_V = "9";
+export const ACTION_DECK_ASSET_V = "10";
+
+/** Tył wspólnej talii akcji na mapie stołu (coach) */
+export const COMMON_ACTION_DECK_BACK_SRC = "./img/cards/action/common-back.png";
+/** Liczba kart w wspólnej talii akcji na mapie (zasadnicza talia akcji — instrukcja EN/PL). */
+export const COMMON_ACTION_DECK_CARD_COUNT = 90;
+/** Ile kart w animacji tasowania na ekranie coacha. */
+export const COMMON_ACTION_DECK_STACK_SIZE = 7;
+export const COMMON_ACTION_DECK_ASSET_V = "3";
 
 /**
  * Lewy pas na talię na planszetka-mat (pionowe wycięcie przy tarczy / lewej krawędzi).
@@ -51,14 +59,12 @@ const GUIDE_ACTION_DECK_LOGO = "./img/cards/action/niedzwiedz/logo.png";
 export const ACTION_DECK_POOL_SIZE = 10;
 
 export function guideActionDeckShuffleSrcs(poolSize = ACTION_DECK_POOL_SIZE) {
-  return Array.from(
-    { length: poolSize },
-    (_, i) => GUIDE_ACTION_DECK_CARDS[i % GUIDE_ACTION_DECK_CARDS.length]
-  );
+  const back = schoolActionDeckBackSrc("niedzwiedz");
+  return Array.from({ length: poolSize }, () => back);
 }
 
 export function guideActionDeckFallbackSrc() {
-  return GUIDE_ACTION_DECK_CARDS[0];
+  return schoolActionDeckBackSrc("niedzwiedz");
 }
 
 export function guideActionDeckLogoHintSrc() {

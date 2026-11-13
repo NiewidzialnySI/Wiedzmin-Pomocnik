@@ -19,6 +19,21 @@ import {
   playerBoardActionDeckMainHtml,
 } from "./player-board-action-deck.js";
 import { bindSchoolTrophyStep, playerBoardTrophyMainHtml } from "./player-board-trophies.js";
+import {
+  bindPlayerBoardFigureStep,
+  playerBoardFigureMainHtml,
+} from "./player-board-figure-prep.js";
+import {
+  COMMON_ACTION_DECK_ASSET_V,
+  COMMON_ACTION_DECK_BACK_SRC,
+  COMMON_ACTION_DECK_CARD_COUNT,
+  COMMON_ACTION_DECK_STACK_SIZE,
+  ACTION_CARD_ASPECT_W,
+  ACTION_CARD_ASPECT_H,
+} from "./school-action-deck-prep.js";
+import { startResourcesDealIntro, startResourcesDealListHtml } from "./start-resources-screen.js";
+import { runScreenTransition } from "./screen-transition.js";
+import { mapPawnsPrepPanelHtml } from "./map-setup-pawns.js";
 import { schoolTrophyPrepScenario } from "./school-trophy-prep.js";
 import { SCHOOLS, canonicalSchoolId, sourcesHtml } from "./sources.js";
 import { lexiconHtml, SCHOOL_SPECIALTIES } from "./lexicon.js";
@@ -57,6 +72,22 @@ import {
   locationsForTerrain,
   LOCATIONS,
 } from "./board.js";
+import {
+  mountCoachOverlays,
+  measureActionDeckLipBox,
+  measureSlotBoxInLayer,
+  queryActionDeckSlot,
+} from "./map/overlay-layer.js";
+import {
+  cardFitInLipRect,
+  htmlCardFitVarsForLip,
+  mainDeckSeatScaleForPortraitInLip,
+} from "./map/card-field-spec.js";
+import {
+  mountMainDeckInForeignObject,
+  unmountMainDeckToOverlay,
+  isMainDeckSvgAnchored,
+} from "./map/action-deck-mount.js";
 import {
   neighborPickerHtml,
   moveCostChooserHtml,
@@ -149,8 +180,9 @@ if (!window.__wiedzminKeysBound) {
     if (typing) return;
     if (tag && tag.matches && tag.matches("button, [contenteditable=true]")) return;
     const primary =
+      appEl?.querySelector(".flow-actions .btn-primary:not([disabled])") ||
       appEl?.querySelector(".btn-primary:not([disabled])") ||
-      appEl?.querySelector("#next:not([disabled]), #pb-next:not([disabled]), #to-roster, #to-setup, #to-turn, #confirm-order");
+      appEl?.querySelector("#next:not([disabled]), #pb-next:not([disabled]), #to-roster, #to-setup, #to-turn, #confirm-order, #deal-next");
     if (!primary) return;
     e.preventDefault();
     primary.click();
@@ -251,6 +283,7 @@ function normalizeState(raw) {
     "roster",
     "playerboard",
     "order",
+    "deal",
     "setup",
     "board",
     "turn",
@@ -411,7 +444,7 @@ function leaveSplashThen(next) {
     finish();
   };
   root.addEventListener("animationend", onEnd);
-  window.setTimeout(finish, 720);
+  window.setTimeout(finish, 420);
 }
 
 function startNewAdventure() {
@@ -527,39 +560,37 @@ function setPlayers(n, { rerender = true } = {}) {
   if (rerender) render();
 }
 
-function leavePanelThen(next) {
-  const panel = appEl.querySelector(".panel");
-  const reduce =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!panel || reduce) {
-    next();
-    return;
-  }
-  if (panel.classList.contains("is-leaving")) return;
-  panel.classList.add("is-leaving");
-  let finished = false;
-  const finish = () => {
-    if (finished) return;
-    finished = true;
-    panel.removeEventListener("animationend", onEnd);
-    next();
-  };
-  const onEnd = (event) => {
-    if (event.target !== panel) return;
-    finish();
-  };
-  panel.addEventListener("animationend", onEnd);
-  window.setTimeout(finish, 420);
+function leavePanelThen(next, { direction = "forward" } = {}) {
+  runScreenTransition(next, { direction });
 }
 
-function go(view, extras = {}) {
-  state.view = view;
-  Object.assign(state, extras);
-  if (view !== "splash") state.adventureStarted = true;
-  saveState({ immediate: true });
-  render();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function go(view, extras = {}, { direction = "forward", animate = true } = {}) {
+  const apply = () => {
+    state.view = view;
+    Object.assign(state, extras);
+    if (view !== "splash") state.adventureStarted = true;
+    saveState({ immediate: true });
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  if (!animate) {
+    apply();
+    return;
+  }
+  runScreenTransition(apply, { direction });
+}
+
+function goBack(view, extras = {}) {
+  go(view, extras, { direction: "back" });
+}
+
+function transitionRender(mutate, { direction = "forward" } = {}) {
+  runScreenTransition(() => {
+    mutate();
+    saveState();
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, { direction });
 }
 
 function render() {
@@ -572,6 +603,7 @@ function render() {
   else if (state.view === "roster") renderRoster();
   else if (state.view === "playerboard") renderPlayerBoard();
   else if (state.view === "order") renderOrder();
+  else if (state.view === "deal") renderDeal();
   else if (state.view === "setup") renderSetup();
   else if (state.view === "board") renderBoard();
   else if (state.view === "turn") renderTurn();
@@ -744,7 +776,7 @@ function renderHome() {
             )
             .join("")}
         </div>
-        <div class="actions home-hero-actions">
+        <div class="actions flow-actions home-hero-actions">
           <button type="button" class="btn btn-primary" id="to-roster">Dalej</button>
         </div>
       </div>
@@ -764,7 +796,7 @@ function renderHome() {
     btn.addEventListener("click", () => selectPlayers(Number(btn.dataset.players)));
   });
   appEl.querySelector("#to-roster").addEventListener("click", () => {
-    leavePanelThen(() => go("roster"));
+    go("roster");
   });
 }
 
@@ -819,7 +851,7 @@ function renderRoster() {
             })
             .join("")}
         </div>
-        <div class="actions roster-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="back-home">Wstecz</button>
           <button type="button" class="btn btn-primary" id="to-order">Dalej</button>
         </div>
@@ -942,22 +974,14 @@ function renderRoster() {
   appEl.querySelector("#roll-schools")?.addEventListener("click", () => rollSchoolsForAll());
 
   appEl.querySelector("#back-home").addEventListener("click", () => {
-    leavePanelThen(() => go("home"));
+    goBack("home");
   });
   appEl.querySelector("#to-order").addEventListener("click", () => {
     syncNamesFromDom();
     applySchoolStarts();
     state.playerBoardIndex = 0;
-    leavePanelThen(() => go("playerboard"));
-  });
-}
-
-function finishPlayerBoardPrep() {
-  leavePanelThen(() => {
     if (isSolo()) {
-      applyStartResources(state.roster, state.players, { force: true });
-      state.setupIndex = 0;
-      go("setup");
+      go("playerboard");
     } else {
       state.orderDice = [];
       go("order");
@@ -965,18 +989,31 @@ function finishPlayerBoardPrep() {
   });
 }
 
+function playerBoardStepIndex(steps, stepId) {
+  const i = steps.findIndex((s) => s.id === stepId);
+  return i >= 0 ? i : Math.max(0, steps.length - 1);
+}
+
+function finishPlayerBoardPrep() {
+  runScreenTransition(() => {
+    applyStartResources(state.roster, state.players, { force: true });
+    state.setupIndex = 0;
+    _setupEnterBoard = true;
+    state.view = "setup";
+    saveState({ immediate: true });
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, { direction: "forward" });
+}
+
 function renderPlayerBoard() {
   ensureRoster();
   const steps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
   const index = Math.min(state.playerBoardIndex, steps.length - 1);
   const step = steps[index];
-  const pct = Math.round(((index + 1) / steps.length) * 100);
   const isLast = index >= steps.length - 1;
-  const nextLabel = isLast
-    ? isSolo()
-      ? "Przygotowanie stołu"
-      : "Kolejność i zasoby"
-    : "Dalej";
+  const isDeckStep = step.id === "deck";
+  const isFigureStep = step.id === "figure-ring";
 
   const boardSrc = step.boardImg || PLAYER_BOARD_SCAN_SRC;
   const boardV = step.boardVer ?? 5;
@@ -985,8 +1022,10 @@ function renderPlayerBoard() {
   const overlayPulse = step.boardOverlayPulse !== false && Boolean(overlaySrc);
   const trophyStep = Boolean(step.schoolTrophyPrep);
   const actionDeckStep = Boolean(step.schoolActionDeckPrep);
+  const figureStep = Boolean(step.figurePrep);
   const active = activePlayer();
   const schoolId = canonicalSchoolId(active?.schoolId);
+  const school = schoolById(schoolId);
   const trophySc = trophyStep ? schoolTrophyPrepScenario(state.players) : null;
   shell(`
     <section class="panel player-board-screen" data-pb-focus="${escapeAttr(step.focus)}" data-pb-step="${escapeAttr(step.id || "")}">
@@ -997,17 +1036,11 @@ function renderPlayerBoard() {
             ? " player-board-stack--trophies"
             : actionDeckStep
               ? " player-board-stack--action-deck"
-              : " player-board-stack--coach"
+              : figureStep
+                ? " player-board-stack--figure"
+                : " player-board-stack--coach"
       }">
         <header class="player-board-head">
-          ${
-            step.minimal
-              ? ""
-              : `<div class="progress setup-progress player-board-progress">
-            <div class="progress-bar"><span style="width:${pct}%"></span></div>
-          </div>
-          <p class="step-kicker">Krok ${index + 1} z ${steps.length}</p>`
-          }
           <h1>Przygotuj planszetkę</h1>
           <div class="home-hero-rule" aria-hidden="true"></div>
         </header>
@@ -1026,7 +1059,15 @@ function renderPlayerBoard() {
                     boardSrc,
                     boardV,
                   })
-                : `
+                : figureStep
+                  ? playerBoardFigureMainHtml({
+                      schoolId,
+                      schoolName: school.name,
+                      playerName: active?.name || "",
+                      playerSlot: state.activeIndex + 1,
+                      solo: isSolo(),
+                    })
+                  : `
           <div class="player-board-stage" data-focus="${escapeAttr(step.focus)}" aria-live="polite">
             ${step.minimal ? "" : `<span class="player-board-focus" aria-hidden="true"></span>`}
             <figure class="player-board-scan" id="player-board-scan">
@@ -1071,9 +1112,9 @@ function renderPlayerBoard() {
           }
         </div>
 
-        <div class="actions player-board-actions roster-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="pb-prev">Wstecz</button>
-          <button type="button" class="btn btn-primary" id="pb-next">${escapeHtml(nextLabel)}</button>
+          <button type="button" class="btn btn-primary" id="pb-next">Dalej</button>
         </div>
       </div>
     </section>
@@ -1086,6 +1127,9 @@ function renderPlayerBoard() {
   }
   if (actionDeckStep && stackEl) {
     bindSchoolActionDeckStep(stackEl);
+  }
+  if (figureStep && stackEl) {
+    bindPlayerBoardFigureStep(stackEl);
   }
 
   const scanFig = appEl.querySelector("#player-board-scan");
@@ -1112,26 +1156,31 @@ function renderPlayerBoard() {
   }
 
   appEl.querySelector("#pb-prev").addEventListener("click", () => {
-    if (index === 0) {
-      leavePanelThen(() => go("roster"));
+    if (isFigureStep) {
+      goBack("deal");
       return;
     }
-    state.playerBoardIndex = index - 1;
-    saveState();
-    render();
+    if (index === 0) {
+      goBack(isSolo() ? "roster" : "order");
+      return;
+    }
+    transitionRender(() => {
+      state.playerBoardIndex = index - 1;
+    }, { direction: "back" });
   });
 
   appEl.querySelector("#pb-next").addEventListener("click", () => {
+    if (isDeckStep) {
+      go("deal");
+      return;
+    }
     if (isLast) {
-      if (isSolo() && step.id === "resources") {
-        applyStartResources(state.roster, state.players, { force: true });
-      }
       finishPlayerBoardPrep();
       return;
     }
-    state.playerBoardIndex = index + 1;
-    saveState();
-    render();
+    transitionRender(() => {
+      state.playerBoardIndex = index + 1;
+    });
   });
 }
 
@@ -1284,9 +1333,9 @@ function renderOrder() {
             .join("")}
         </ul>
 
-        <div class="actions order-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="back-roster">Wstecz</button>
-          <button type="button" class="btn btn-primary" id="confirm-order">Zatwierdź i rozdaj</button>
+          <button type="button" class="btn btn-primary" id="confirm-order">Dalej</button>
         </div>
       </div>
     </section>
@@ -1359,15 +1408,50 @@ function renderOrder() {
   });
 
   appEl.querySelector("#back-roster").addEventListener("click", () => {
-    leavePanelThen(() => go("playerboard"));
+    goBack("roster");
   });
   appEl.querySelector("#confirm-order").addEventListener("click", () => {
-    applyStartResources(state.roster, state.players, { force: true });
     state.activeIndex = 0;
-    state.setupIndex = 0;
+    state.playerBoardIndex = 0;
     state.orderDice = [];
     saveState();
-    leavePanelThen(() => go("setup"));
+    go("playerboard");
+  });
+}
+
+function renderDeal() {
+  ensureRoster();
+  const intro = startResourcesDealIntro(isSolo());
+  const steps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
+  const deckPbIndex = playerBoardStepIndex(steps, "deck");
+  const figurePbIndex = playerBoardStepIndex(steps, "figure-ring");
+
+  shell(`
+    <section class="panel deal-screen order-screen">
+      <div class="order-stack deal-stack">
+        <header class="order-head">
+          <h1>${escapeHtml(intro.title)}</h1>
+          ${intro.lead ? `<p class="deal-lead">${escapeHtml(intro.lead)}</p>` : ""}
+          <div class="home-hero-rule" aria-hidden="true"></div>
+        </header>
+        ${startResourcesDealListHtml({ roster: state.roster, playerCount: state.players })}
+        <div class="actions flow-actions">
+          <button type="button" class="btn btn-secondary" id="deal-back">Wstecz</button>
+          <button type="button" class="btn btn-primary" id="deal-next">Dalej</button>
+        </div>
+      </div>
+    </section>
+  `);
+
+  appEl.querySelector("#deal-back")?.addEventListener("click", () => {
+    state.playerBoardIndex = deckPbIndex;
+    saveState();
+    goBack("playerboard");
+  });
+  appEl.querySelector("#deal-next")?.addEventListener("click", () => {
+    state.playerBoardIndex = figurePbIndex;
+    saveState();
+    go("playerboard");
   });
 }
 
@@ -1382,6 +1466,8 @@ function escapeAttr(s) {
 
 let _setupEnterBoard = false;
 let _setupEnterCoach = false;
+/** Po animacji wprowadzenia wspólnej talii na mapie (faza coach 0). */
+let _setupMainDeckPlaced = false;
 /** 0..8 jak wcześniej; 9 = żetony obszaru na polach kart; 10 = potwory na kartach + mapie */
 let _setupDeckCoachPhase = 0;
 const SETUP_DECK_COACH_LAST = 10;
@@ -1401,7 +1487,7 @@ const SETUP_EXPLORE_DECKS = [
 const SETUP_EXPLORE_SLOTS = SETUP_EXPLORE_DECKS.map((d) => d.slot);
 
 /** Kroki przygotowania przed ekranem „Potwory na start”. */
-const SETUP_PREP_BEFORE_MONSTERS = new Set(["intro", "board", "action-deck"]);
+const SETUP_PREP_BEFORE_MONSTERS = new Set(["intro", "board", "action-deck", "map-pawns"]);
 
 function leaveCoachThen(next, { keepDeals = false } = {}) {
   const coach = appEl.querySelector(".setup-coach");
@@ -1412,7 +1498,10 @@ function leaveCoachThen(next, { keepDeals = false } = {}) {
     next();
     return;
   }
-  if (coach.classList.contains("is-leaving")) return;
+  if (coach.classList.contains("is-leaving")) {
+    window.setTimeout(next, keepDeals ? 160 : 280);
+    return;
+  }
   coach.classList.add("is-leaving");
   if (!keepDeals) {
     appEl.querySelector(".setup-head h1")?.classList.add("is-title-leaving");
@@ -1435,7 +1524,9 @@ function settleCoachDealRoot(root) {
   root.classList.add("is-ready", "is-settled-layer", "is-positioned");
   root.classList.remove("is-leaving");
   root.querySelectorAll(".setup-deal-card").forEach((c) => {
+    const horiz = c.classList.contains("setup-deal-card--pool");
     c.classList.add("is-dealt", "is-flipped", "is-settled");
+    if (horiz) c.classList.add("is-slot-horizontal");
   });
   root
     .querySelectorAll(
@@ -1451,7 +1542,7 @@ function coachDealBuilders() {
   return {
     1: () =>
       `<div class="setup-deal setup-deal--zero" id="setup-deal-zero" data-slots="zero" aria-hidden="true">${setupDealCardsHtml(
-        { costs: [0, 0, 0] }
+        { costs: [0, 0, 0], useCommonBack: true }
       )}</div>`,
     2: () =>
       `<div class="setup-deal setup-deal--rest" id="setup-deal-rest" data-slots="rest" aria-hidden="true">${setupDealCardsHtml(
@@ -1566,6 +1657,13 @@ function applyCoachPhaseDom(phase) {
   const text = coach.querySelector(".setup-coach-text");
   if (kicker) kicker.textContent = copy.kicker;
   if (text) text.innerHTML = copy.text;
+  const sideTile = appEl.querySelector("#setup-coach-side-tile");
+  if (sideTile) {
+    const sideKicker = sideTile.querySelector(".setup-coach-kicker");
+    const sideText = sideTile.querySelector(".setup-coach-text");
+    if (sideKicker) sideKicker.textContent = copy.kicker;
+    if (sideText) sideText.innerHTML = copy.text;
+  }
   coach.classList.remove("is-leaving");
 
   preview
@@ -1598,7 +1696,14 @@ function applyCoachPhaseDom(phase) {
     else {
       node.classList.remove("is-settled-layer", "is-positioned", "is-ready", "is-leaving");
       node.querySelectorAll(".setup-deal-card").forEach((c) => {
-        c.classList.remove("is-dealt", "is-flipped", "is-settled");
+        c.classList.remove(
+          "is-dealt",
+          "is-flipped",
+          "is-settled",
+          "is-slot-horizontal",
+          "is-landing",
+          "is-seating"
+        );
       });
       node
         .querySelectorAll(
@@ -1705,8 +1810,8 @@ function setupDeckCoachCopy(phase) {
     };
   }
   return {
-    kicker: "Talia akcji",
-    text: `Połóż <strong>zakrytą talię</strong> na pierwszym polu od góry w prawej kolumnie (7 kart) — zaznaczone rombem.`,
+    kicker: "Wspólna talia akcji",
+    text: `Przetasuj <strong>wspólne karty akcji</strong> — <strong>${COMMON_ACTION_DECK_CARD_COUNT} kart</strong>. Następnie połóż je <strong>zakryte</strong> na odpowiednim polu.`,
   };
 }
 
@@ -1912,18 +2017,107 @@ function setupExploreDecksHtml({ settled = false } = {}) {
     </div>`;
 }
 
-function setupDealCardsHtml({ costs, settled = false }) {
+function applyMainDeckLandedState(root, { stackOnSlot = true } = {}) {
+  if (!root) return;
+  const cards = [...root.querySelectorAll(".setup-deal-card--main-deck")];
+  cards.forEach((c, i) => {
+    c.classList.add("is-dealt", "is-settled", "is-slot-horizontal");
+    c.classList.remove("is-landing");
+    if (stackOnSlot && i < cards.length - 1) c.classList.add("is-stack-hidden");
+  });
+  appEl.querySelector(".setup-screen")?.classList.add("setup-screen--main-deck-settled");
+  if (!_setupMainDeckPlaced) {
+    _setupMainDeckPlaced = true;
+    queryActionDeckSlot(appEl)?.classList.add("is-coach-deck");
+  }
+}
+
+function settleMainDeckRoot(root) {
+  if (!root) return;
+  root.classList.add("is-ready", "is-settled-layer", "is-positioned", "is-idle");
+  root.classList.remove("is-leaving", "is-shuffling", "is-flying", "is-seating", "is-loop-out");
+  applyMainDeckLandedState(root);
+}
+
+function resetMainDeckCycle(dealRoot, cards, { keepSvgSettled = false } = {}) {
+  unmountMainDeckToOverlay(
+    appEl.querySelector(".setup-board-preview--coach"),
+    dealRoot
+  );
+  if (!keepSvgSettled) {
+    appEl.querySelector(".setup-screen")?.classList.remove("setup-screen--main-deck-settled");
+  }
+  dealRoot.classList.remove(
+    "is-settled-layer",
+    "is-positioned",
+    "is-seating",
+    "is-flying",
+    "is-shuffling",
+    "is-loop-out",
+    "is-deck-entering",
+    "is-deck-entered"
+  );
+  cards.forEach((c) => {
+    c.classList.remove(
+      "is-dealt",
+      "is-settled",
+      "is-seated",
+      "is-landing",
+      "is-stack-hidden",
+      "is-slot-horizontal",
+      "is-seating",
+      "is-seated-visual",
+      "is-loop-out"
+    );
+  });
+}
+
+function setupMainDeckStackHtml({ settled = false } = {}) {
+  const v = COMMON_ACTION_DECK_ASSET_V;
+  const back = COMMON_ACTION_DECK_BACK_SRC;
+  const cards = Array.from({ length: COMMON_ACTION_DECK_STACK_SIZE }, (_, i) => `
+        <div class="setup-deal-card setup-deal-card--main-deck setup-deal-card--portrait${
+          settled ? " is-dealt is-settled is-slot-horizontal" : ""
+        }" data-deal="${i}" style="--stack-i: ${i}">
+          <div class="setup-deal-card__inner setup-deal-card__inner--back-only">
+            <div class="setup-deal-card__face setup-deal-card__face--scan setup-deal-card__face--portrait" aria-hidden="true">
+              <img src="${back}?v=${v}" alt="" decoding="async" />
+            </div>
+          </div>
+        </div>`).join("");
+  return `<div class="setup-deal setup-deal--main-deck${dealRootClass(settled)}${
+    settled ? " is-positioned" : ""
+  }" id="setup-deal-main-deck" aria-hidden="true">${cards}</div>`;
+}
+
+function setupDealCardsHtml({ costs, settled = false, useCommonBack = false } = {}) {
+  const v = COMMON_ACTION_DECK_ASSET_V;
+  const back = COMMON_ACTION_DECK_BACK_SRC;
   return costs
     .map(
       (cost, i) => `
-        <div class="setup-deal-card${settled ? " is-dealt is-flipped is-settled" : ""}" data-deal="${i}">
+        <div class="setup-deal-card${
+          useCommonBack ? " setup-deal-card--pool setup-deal-card--portrait" : ""
+        }${
+          settled
+            ? useCommonBack
+              ? " is-dealt is-flipped is-slot-horizontal is-settled"
+              : " is-dealt is-flipped is-settled"
+            : ""
+        }" data-deal="${i}">
+          ${useCommonBack ? `<div class="setup-deal-card__rot">` : ""}
           <div class="setup-deal-card__inner">
-            <div class="setup-deal-card__face setup-deal-card__face--back" aria-hidden="true"></div>
+            <div class="setup-deal-card__face setup-deal-card__face--back${
+              useCommonBack ? " setup-deal-card__face--scan" : ""
+            }" aria-hidden="true">${
+        useCommonBack ? `<img src="${back}?v=${v}" alt="" decoding="async" />` : ""
+      }</div>
             <div class="setup-deal-card__face setup-deal-card__face--front">
               <span class="setup-deal-card__cost">${cost}</span>
               <span class="setup-deal-card__label">koszt</span>
             </div>
           </div>
+          ${useCommonBack ? `</div>` : ""}
         </div>`
     )
     .join("");
@@ -1955,6 +2149,29 @@ function renderSetup() {
     }
   }
 
+  if (step.id === "map-pawns") {
+  (state.roster || []).forEach((p) => {
+    placeAtSchool(p, { force: true });
+    p.reputation = 0;
+  });
+    ensureReputationClaims(state.board, state.roster);
+  }
+
+  const mapPawnsMain =
+    step.id === "map-pawns"
+      ? `
+      <div class="setup-map-pawns-layout">
+        ${mapPawnsPrepPanelHtml({ roster: state.roster })}
+        <div class="setup-map-embed setup-map-embed--pawns">
+          ${mapSvgHtml(state.board || defaultBoard(), state.roster, {
+            schoolById,
+            setupPreview: true,
+            setupMapPawns: true,
+          })}
+        </div>
+      </div>`
+      : "";
+
   const monsterMap =
     step.id === "monsters"
       ? `
@@ -1970,9 +2187,12 @@ function renderSetup() {
       </div>`
       : "";
 
-  const showBoardMap = step.id === "board" || step.id === "action-deck";
+  const showBoardMap = step.id === "board" || step.id === "action-deck" || step.id === "map-pawns";
   const showDeckCoach = step.id === "action-deck";
-  if (!showDeckCoach) _setupDeckCoachPhase = 0;
+  if (!showDeckCoach) {
+    _setupDeckCoachPhase = 0;
+    _setupMainDeckPlaced = false;
+  }
   const coachPhase = showDeckCoach ? _setupDeckCoachPhase : 0;
   const coachCopy = setupDeckCoachCopy(coachPhase);
   const coachTitle = setupDeckCoachTitle(coachPhase, step.title);
@@ -2002,14 +2222,22 @@ function renderSetup() {
                   <p class="setup-coach-kicker">${coachCopy.kicker}</p>
                   <p class="setup-coach-text">${coachCopy.text}</p>
                 </div>
+                <div class="setup-coach-side-tile" id="setup-coach-side-tile" role="note" aria-label="Wskazówka">
+                  <p class="setup-coach-kicker">${coachCopy.kicker}</p>
+                  <p class="setup-coach-text">${coachCopy.text}</p>
+                </div>
                 <svg class="setup-coach-arrow" id="setup-coach-arrow" aria-hidden="true"></svg>
               </div>
+              ${setupMainDeckStackHtml({
+                settled: coachPhase > 0 || _setupMainDeckPlaced,
+              })}
               ${
                 coachPhase >= 1
                   ? `<div class="setup-deal setup-deal--zero${dealRootClass(coachPhase > 1)}" id="setup-deal-zero" data-slots="zero" aria-hidden="true">
                       ${setupDealCardsHtml({
                         costs: [0, 0, 0],
                         settled: coachPhase > 1,
+                        useCommonBack: true,
                       })}
                     </div>`
                   : ""
@@ -2047,14 +2275,19 @@ function renderSetup() {
     step.id === "intro" ? "setup-screen--intro" : "",
     step.id === "board" ? "setup-screen--board-step" : "",
     step.id === "action-deck" ? "setup-screen--coach-flow" : "",
+    showDeckCoach && coachPhase === 0 ? "setup-screen--coach-phase-0" : "",
     enterBoard ? "setup-screen--enter-board" : "",
     enterCoach ? "setup-screen--enter-coach" : "",
+    showDeckCoach && (coachPhase > 0 || _setupMainDeckPlaced)
+      ? "setup-screen--main-deck-settled"
+      : "",
     dealActive ? "setup-screen--deal-zero" : "",
     exploreActive ? "setup-screen--explore-decks" : "",
     notchActive ? "setup-screen--elixir-deck" : "",
     topActive ? "setup-screen--monster-stacks" : "",
     monsterSpawnActive ? "setup-screen--coach-spawn" : "",
     step.id === "monsters" ? "setup-screen--monsters" : "",
+    step.id === "map-pawns" ? "setup-screen--map-pawns" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -2062,10 +2295,14 @@ function renderSetup() {
   shell(`
     <section class="panel setup-screen${screenMods ? ` ${screenMods}` : ""}">
       <div class="setup-stack">
-        <header class="setup-head">
-          <div class="progress setup-progress">
+        <header class="setup-head${isPrepBeforeMonsters ? " setup-head--prep-hero" : ""}">
+          ${
+            isPrepBeforeMonsters
+              ? ""
+              : `<div class="progress setup-progress">
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
-          </div>
+          </div>`
+          }
           <h1>${coachTitle}</h1>
           <div class="home-hero-rule" aria-hidden="true"></div>
         </header>
@@ -2073,17 +2310,25 @@ function renderSetup() {
         <div class="setup-main${showBoardMap ? " setup-main--board" : ""}${
           step.id === "monsters" ? " setup-main--monsters" : ""
         }">
-          ${showDeckCoach ? "" : `<div class="step-body">${step.body}</div>`}
-          ${boardPreview}
+          ${
+            showDeckCoach
+              ? ""
+              : step.id === "map-pawns"
+                ? mapPawnsMain
+                : String(step.body || "").trim()
+                  ? `<div class="step-body">${step.body}</div>`
+                  : ""
+          }
+          ${step.id === "map-pawns" ? "" : boardPreview}
           ${monsterMap}
         </div>
 
-        <div class="actions setup-actions">
+        <div class="actions flow-actions">
           <button type="button" class="btn btn-secondary" id="prev">Wstecz</button>
           ${
             step.nextMode === "turn"
-              ? `<button type="button" class="btn btn-primary" id="to-turn">Prowadź pierwszą turę</button>`
-              : `<button type="button" class="btn btn-primary" id="next">Zrobione — dalej</button>`
+              ? `<button type="button" class="btn btn-primary" id="to-turn">Dalej</button>`
+              : `<button type="button" class="btn btn-primary" id="next">Dalej</button>`
           }
         </div>
       </div>
@@ -2101,7 +2346,10 @@ function renderSetup() {
   if (prev) {
     prev.addEventListener("click", () => {
       if (index === 0) {
-        leavePanelThen(() => go(isSolo() ? "roster" : "order"));
+        const pbSteps = buildPlayerBoardSteps({ playerCount: state.players, solo: isSolo() });
+        state.playerBoardIndex = playerBoardStepIndex(pbSteps, "figure-ring");
+        saveState();
+        goBack("playerboard");
         return;
       }
       if (step.id === "action-deck" && _setupDeckCoachPhase > 0) {
@@ -2121,12 +2369,10 @@ function renderSetup() {
       const after = () => {
         _setupDeckCoachPhase = 0;
         state.setupIndex = index - 1;
-        saveState();
-        render();
-        window.scrollTo({ top: 0, behavior: "smooth" });
       };
-      if (fromCoach) leaveCoachThen(after);
-      else leavePanelThen(after);
+      const goPrevStep = () => transitionRender(after, { direction: "back" });
+      if (fromCoach) leaveCoachThen(goPrevStep);
+      else goPrevStep();
     });
   }
   if (next) {
@@ -2164,14 +2410,16 @@ function renderSetup() {
         if (toCoach) {
           _setupDeckCoachPhase = 0;
           _setupEnterCoach = true;
+          _setupMainDeckPlaced = false;
         }
         if (step.id === "action-deck") _setupDeckCoachPhase = 0;
+      };
+      if (toCoach) {
+        after();
         saveState();
         render();
         window.scrollTo({ top: 0, behavior: "smooth" });
-      };
-      if (toCoach) after();
-      else leavePanelThen(after);
+      } else transitionRender(after);
     });
   }
   if (toTurn) {
@@ -2179,7 +2427,7 @@ function renderSetup() {
       applyStartResources(state.roster, state.players, { force: true });
       state.activeIndex = 0;
       state.turnNumber = 1;
-      leavePanelThen(() => go("turn", { turn: { phase: "hub", screen: "hub" } }));
+      go("turn", { turn: { phase: "hub", screen: "hub" } });
     });
   }
 
@@ -2198,7 +2446,7 @@ function bindSetupDeckCoach(phase = 0) {
   _coachResizeAbort?.abort();
   _coachResizeAbort = new AbortController();
 
-  const deck = preview.querySelector('.map-card-slot[data-slot="6"]');
+  const deck = queryActionDeckSlot(preview);
   const slotsOf = (ids) =>
     ids.map((i) => preview.querySelector(`.map-card-slot[data-slot="${i}"]`)).filter(Boolean);
 
@@ -2263,7 +2511,9 @@ function bindSetupDeckCoach(phase = 0) {
   if (!highlight.length) return;
 
   highlight.forEach((t) => t.classList.add("is-coach-target"));
-  if (phase >= 1 && phase <= 2 && deck) deck.classList.add("is-coach-deck");
+  if ((phase >= 1 && phase <= 2 && deck) || _setupMainDeckPlaced) {
+    deck?.classList.add("is-coach-deck");
+  }
   if (phase >= 2) {
     zeroSlots.forEach((t) => t.classList.add("is-coach-filled"));
   }
@@ -2271,7 +2521,36 @@ function bindSetupDeckCoach(phase = 0) {
     restSlots.forEach((t) => t.classList.add("is-coach-filled"));
   }
 
+  const layoutCoachSideTile = () => {
+    const tile = appEl.querySelector("#setup-coach-side-tile");
+    if (!tile || phase !== 0) return;
+    const pr = preview.getBoundingClientRect();
+    if (pr.width < 8) return;
+    const mapFace = preview.querySelector(".map-board-face");
+    const united = preview.querySelector(".map-board-united") || preview.querySelector(".map-svg");
+    const board = united?.getBoundingClientRect();
+    const mapTopRef = mapFace?.getBoundingClientRect() ?? board;
+    if (!board || !mapTopRef) return;
+
+    const gap = 10;
+    const pad = 6;
+    const boardRightInPreview = board.right - pr.left;
+    const left = boardRightInPreview + gap;
+    const tileW = Math.max(148, pr.width - pad - left);
+    const top = mapTopRef.top - pr.top;
+
+    tile.style.width = `${tileW}px`;
+    tile.style.left = `${left}px`;
+    tile.style.top = `${top}px`;
+  };
+
   const placeBubble = (anchorEl) => {
+    if (phase === 0) {
+      layoutCoachSideTile();
+      arrow.innerHTML = "";
+      return null;
+    }
+
     const pr = preview.getBoundingClientRect();
     const tr = anchorEl.getBoundingClientRect();
     if (pr.width < 8 || tr.width < 2) return null;
@@ -2366,8 +2645,339 @@ function bindSetupDeckCoach(phase = 0) {
     return { pr, tx, ty };
   };
 
+  const { mapWrap, positionRoot } = mountCoachOverlays(preview);
+
+  const layoutMainDeck = () => {
+    const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+    const pxRoot = positionRoot || mapWrap;
+    if (!dealRoot || !deck || !pxRoot || !mapWrap) return;
+    const origin = pxRoot.getBoundingClientRect();
+    const svg = mapWrap.querySelector(".map-svg");
+    const united = svg?.querySelector(".map-board-united");
+    const boardEl = united || svg;
+    const boardScreen = boardEl?.getBoundingClientRect();
+    const svgAnchored = isMainDeckSvgAnchored(dealRoot);
+    const foHost = dealRoot.parentElement?.classList?.contains("map-action-deck-fo-host")
+      ? dealRoot.parentElement
+      : null;
+    const box = svgAnchored && foHost
+      ? { left: 0, top: 0, width: foHost.clientWidth, height: foHost.clientHeight }
+      : measureActionDeckLipBox(pxRoot, preview);
+    if (!box || (!svgAnchored && origin.width < 8) || box.width < 2 || !boardScreen?.width) return;
+
+    const aspect = ACTION_CARD_ASPECT_W / ACTION_CARD_ASPECT_H;
+    const gap = 10;
+    const pad = 6;
+    const landW = box.width;
+    const landH = box.height;
+    const { fitRotW, fitRotH } = htmlCardFitVarsForLip(box);
+    /* Kontener karty = dokładnie prostokąt lip (jak rect map-card-slot-lip w SVG). */
+    const x1 = svgAnchored ? 0 : box.left;
+    const y1 = svgAnchored ? 0 : box.top;
+
+    const mapFace = svg?.querySelector(".map-board-face");
+    const mapFaceScreen = mapFace?.getBoundingClientRect();
+    const boardTop = boardScreen.top - origin.top;
+    const boardLeft = boardScreen.left - origin.left;
+    const boardH = boardScreen.height;
+    const mapTopInLayer = mapFaceScreen ? mapFaceScreen.top - origin.top : boardTop;
+    const mapH = mapFaceScreen?.height ?? boardH;
+    const layerW = origin.width;
+
+    /* Stos tasowania — wyższy, góra = góra mapy (map-board-face) */
+    let portraitH = Math.min(Math.max(156, mapH * 0.9), mapH - 6);
+    portraitH = Math.min(portraitH, 300);
+    let portraitW = portraitH * aspect;
+    const maxStackW = Math.max(48, layerW - 2 * pad);
+    if (portraitW > maxStackW) {
+      portraitW = maxStackW;
+      portraitH = portraitW / aspect;
+    }
+
+    const roomLeftOfBoard = boardLeft - gap - pad;
+    let x0Base = pad;
+    if (roomLeftOfBoard >= portraitW * 0.92) {
+      x0Base = boardLeft - portraitW - gap;
+    } else if (roomLeftOfBoard >= 40) {
+      portraitW = Math.min(portraitW, roomLeftOfBoard);
+      portraitH = portraitW / aspect;
+      x0Base = boardLeft - portraitW - gap;
+    }
+    x0Base = Math.max(pad, Math.min(x0Base, layerW - portraitW - pad));
+    const y0Base = mapTopInLayer;
+
+    [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")].forEach((card, i) => {
+      const fanX = i * 0.55;
+      const fanY = i * -1.35;
+      card.style.setProperty("--w", `${portraitW}px`);
+      card.style.setProperty("--h", `${portraitH}px`);
+      card.style.setProperty("--w1", `${landW}px`);
+      card.style.setProperty("--h1", `${landH}px`);
+      card.style.setProperty("--x0", `${x0Base + fanX}px`);
+      card.style.setProperty("--y0", `${y0Base + fanY}px`);
+      card.style.setProperty("--x-enter", `${x0Base + fanX - portraitW - 96}px`);
+      card.style.setProperty("--y-enter", `${y0Base + fanY}px`);
+      card.style.setProperty("--x1", `${x1}px`);
+      card.style.setProperty("--y1", `${y1}px`);
+      card.style.setProperty("--x1-fly", `${x1 + landW / 2 - portraitW / 2}px`);
+      card.style.setProperty("--y1-fly", `${y1 + landH / 2 - portraitH / 2}px`);
+      /* Ten sam wizualny rozmiar co tył w SVG (`cardFitInLipRect`), bez podwójnego scale */
+      const seatScale = mainDeckSeatScaleForPortraitInLip(
+        { width: landW, height: landH },
+        portraitW,
+        portraitH
+      );
+      card.style.setProperty("--seat-scale", `${seatScale}`);
+      card.style.setProperty("--fit-rot-h", `${fitRotH}px`);
+      card.style.setProperty("--fit-rot-w", `${fitRotW}px`);
+      card.style.zIndex = String(24 + i);
+    });
+  };
+
+  const sleep = (ms) => new Promise((r) => window.setTimeout(r, ms));
+
+  const runMainDeckEnter = () => {
+    const dealRoot = appEl.querySelector("#setup-deal-main-deck");
+    if (!dealRoot) return;
+    if (dealRoot.classList.contains("is-settled-layer") && _setupDeckCoachPhase !== 0) return;
+    const reduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      layoutMainDeck();
+      settleMainDeckRoot(dealRoot);
+      return;
+    }
+    if (dealRoot.dataset.enterRunning === "1") return;
+    dealRoot.dataset.enterRunning = "1";
+    const cards = [...dealRoot.querySelectorAll(".setup-deal-card--main-deck")];
+
+    const runShufflePass = () =>
+      new Promise((resolve) => {
+        dealRoot.classList.remove("is-shuffling");
+        void dealRoot.offsetWidth;
+        dealRoot.classList.add("is-shuffling");
+        window.setTimeout(resolve, 860);
+      });
+
+    const waitFrame = () =>
+      new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+    const runFlyToSlot = () =>
+      new Promise((resolve) => {
+        layoutMainDeck();
+        dealRoot.classList.add("is-flying");
+        cards.forEach((c) =>
+          c.classList.remove("is-dealt", "is-settled", "is-landing", "is-stack-hidden", "is-slot-horizontal", "is-seating")
+        );
+        cards.forEach((card, i) => {
+          window.setTimeout(
+            () => card.classList.add("is-dealt", "is-landing"),
+            20 + i * 22
+          );
+        });
+        window.setTimeout(() => {
+          layoutMainDeck();
+          cards.forEach((c) => c.classList.remove("is-landing"));
+          dealRoot.classList.remove("is-flying");
+          resolve();
+        }, 800);
+      });
+
+    const runSeatOnSlot = () =>
+      new Promise((resolve) => {
+        const reduceSeat =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        layoutMainDeck();
+        const topCard = cards[cards.length - 1];
+        if (!topCard) {
+          resolve();
+          return;
+        }
+        cards.forEach((c) => {
+          if (c !== topCard) c.classList.add("is-stack-hidden");
+        });
+        if (reduceSeat) {
+          resolve();
+          return;
+        }
+        dealRoot.classList.add("is-seating");
+        void topCard.offsetWidth;
+        requestAnimationFrame(() => {
+          topCard.classList.add("is-seating");
+        });
+        window.setTimeout(() => {
+          dealRoot.classList.remove("is-seating");
+          topCard.classList.remove("is-seating");
+          topCard.classList.add("is-seated-visual");
+          resolve();
+        }, 760);
+      });
+
+    /** Reset + schowanie SVG, stos od razu poza lewą krawędzią → wjazd na miejsce tasowania */
+    const prepareDeckFromLeft = () =>
+      new Promise((resolve) => {
+        const screen = appEl.querySelector(".setup-screen");
+        resetMainDeckCycle(dealRoot, cards, { keepSvgSettled: true });
+        layoutMainDeck();
+        dealRoot.classList.add("is-idle", "is-ready", "is-deck-entering");
+        dealRoot.classList.remove("is-deck-entered");
+        void dealRoot.offsetWidth;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            screen?.classList.remove("setup-screen--main-deck-settled");
+            dealRoot.classList.add("is-deck-entered");
+            window.setTimeout(() => {
+              dealRoot.classList.remove("is-deck-entering", "is-deck-entered");
+              resolve();
+            }, 720);
+          });
+        });
+      });
+
+    (async () => {
+      dealRoot.classList.remove("is-settled-layer", "is-positioned");
+      while (bindGen === _coachBindGen && _setupDeckCoachPhase === 0) {
+        await prepareDeckFromLeft();
+        await waitFrame();
+        for (let pass = 0; pass < 3; pass++) {
+          if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+          await runShufflePass();
+        }
+        if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+        dealRoot.classList.remove("is-shuffling");
+        await runFlyToSlot();
+        await runSeatOnSlot();
+        await waitFrame();
+        applyMainDeckLandedState(dealRoot);
+        await sleep(1700);
+        if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 0) break;
+      }
+      if (bindGen === _coachBindGen && _setupDeckCoachPhase === 0) {
+        layoutMainDeck();
+        settleMainDeckRoot(dealRoot);
+      }
+      delete dealRoot.dataset.enterRunning;
+    })();
+  };
+
+  const layoutZeroPoolGroup = (dealRoot, targetSlots) => {
+    if (!dealRoot || !deck || !targetSlots.length || !positionRoot) return;
+    const deckBox =
+      measureActionDeckLipBox(positionRoot, preview) ||
+      measureSlotBoxInLayer(positionRoot, deck, { metric: "lip" });
+    if (!deckBox?.width) return;
+
+    [...dealRoot.querySelectorAll(".setup-deal-card--pool")].forEach((card, i) => {
+      const slot = targetSlots[i];
+      if (!slot) return;
+      const slotBox = measureSlotBoxInLayer(positionRoot, slot, { metric: "lip" });
+      if (!slotBox?.width) return;
+
+      const landW = slotBox.width;
+      const landH = slotBox.height;
+      const { unrotated } = cardFitInLipRect({
+        x: 0,
+        y: 0,
+        w: landW,
+        h: landH,
+      });
+      const portraitW = unrotated.w;
+      const portraitH = unrotated.h;
+
+      const fanX = i * 1.2;
+      const fanY = i * -0.9;
+      /* Wylot z talii — cały czas pionowa karta (nie obrót −90° do końca animacji). */
+      const x0 = deckBox.left + deckBox.width / 2 - portraitW / 2 + fanX;
+      const y0 = deckBox.top - portraitH * 0.72 + fanY;
+
+      const x1 = slotBox.left;
+      const y1 = slotBox.top;
+      const x1Fly = slotBox.left + slotBox.width / 2 - portraitW / 2;
+      const y1Fly = slotBox.top + slotBox.height / 2 - portraitH / 2;
+      const seatScale = mainDeckSeatScaleForPortraitInLip(
+        { width: landW, height: landH },
+        portraitW,
+        portraitH
+      );
+      const { fitRotW, fitRotH } = htmlCardFitVarsForLip({ width: landW, height: landH });
+
+      card.style.setProperty("--w", `${portraitW}px`);
+      card.style.setProperty("--h", `${portraitH}px`);
+      card.style.setProperty("--w1", `${landW}px`);
+      card.style.setProperty("--h1", `${landH}px`);
+      card.style.setProperty("--x0", `${x0}px`);
+      card.style.setProperty("--y0", `${y0}px`);
+      card.style.setProperty("--x1", `${x1}px`);
+      card.style.setProperty("--y1", `${y1}px`);
+      card.style.setProperty("--x1-fly", `${x1Fly}px`);
+      card.style.setProperty("--y1-fly", `${y1Fly}px`);
+      card.style.setProperty("--seat-scale", `${seatScale}`);
+      card.style.setProperty("--fit-rot-w", `${fitRotW}px`);
+      card.style.setProperty("--fit-rot-h", `${fitRotH}px`);
+      card.style.zIndex = String(32 + i);
+    });
+  };
+
+  const runZeroPoolDeal = () => {
+    const dealRoot = appEl.querySelector("#setup-deal-zero");
+    if (!dealRoot || dealRoot.classList.contains("is-settled-layer")) return;
+    const reduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = [...dealRoot.querySelectorAll(".setup-deal-card--pool")].filter(
+      (c) => !c.classList.contains("is-settled") && !c.classList.contains("is-dealt")
+    );
+    layoutZeroPoolGroup(dealRoot, zeroSlots);
+    if (reduce) {
+      cards.forEach((c) =>
+        c.classList.add("is-dealt", "is-flipped", "is-slot-horizontal", "is-settled")
+      );
+      dealRoot.classList.add("is-ready", "is-settled-layer", "is-positioned");
+      return;
+    }
+    if (!cards.length) return;
+    dealRoot.classList.add("is-ready");
+    dealRoot.classList.remove("is-settled-layer", "is-flying", "is-seating");
+
+    (async () => {
+      for (let i = 0; i < cards.length; i++) {
+        if (bindGen !== _coachBindGen || _setupDeckCoachPhase !== 1) break;
+        const card = cards[i];
+        layoutZeroPoolGroup(dealRoot, zeroSlots);
+        dealRoot.classList.add("is-flying");
+        card.classList.add("is-dealt", "is-landing");
+        await sleep(540);
+        dealRoot.classList.remove("is-flying");
+        card.classList.remove("is-landing");
+        card.classList.add("is-flipped");
+        await sleep(480);
+        layoutZeroPoolGroup(dealRoot, zeroSlots);
+        dealRoot.classList.add("is-seating");
+        void card.offsetWidth;
+        requestAnimationFrame(() => {
+          card.classList.add("is-seating", "is-slot-horizontal");
+        });
+        await sleep(760);
+        dealRoot.classList.remove("is-seating");
+        card.classList.remove("is-seating");
+        card.classList.add("is-settled");
+        await sleep(140);
+      }
+      if (bindGen === _coachBindGen && _setupDeckCoachPhase === 1) {
+        dealRoot.classList.add("is-settled-layer", "is-positioned");
+        dealRoot.classList.remove("is-flying", "is-seating");
+      }
+    })();
+  };
+
   const layoutDealGroup = (dealRoot, targetSlots) => {
     if (!dealRoot || !deck || !targetSlots.length) return;
+    if (dealRoot.id === "setup-deal-zero") {
+      layoutZeroPoolGroup(dealRoot, targetSlots);
+      return;
+    }
     const pr = preview.getBoundingClientRect();
     const dr = deck.getBoundingClientRect();
     if (pr.width < 8 || dr.width < 2) return;
@@ -2602,6 +3212,8 @@ function bindSetupDeckCoach(phase = 0) {
   };
 
   const layoutAll = () => {
+    layoutMainDeck();
+    if (phase === 0) layoutCoachSideTile();
     layoutDealGroup(appEl.querySelector("#setup-deal-zero"), zeroSlots);
     layoutDealGroup(appEl.querySelector("#setup-deal-rest"), restSlots);
     layoutDealGroup(appEl.querySelector("#setup-deal-explore"), exploreSlots);
@@ -2786,7 +3398,7 @@ function bindSetupDeckCoach(phase = 0) {
     window.setTimeout(() => syncCoachLayout(), 440);
   };
   if (phase === 1) {
-    afterLayout(() => runDealGroup(appEl.querySelector("#setup-deal-zero")));
+    afterLayout(() => runZeroPoolDeal());
   } else if (phase === 2) {
     afterLayout(() => runDealGroup(appEl.querySelector("#setup-deal-rest")));
   } else if (phase === 3) {
@@ -2807,6 +3419,8 @@ function bindSetupDeckCoach(phase = 0) {
     afterLayout(() => runMonsterSpawn());
   } else if (phase > 1) {
     afterLayout();
+  } else if (phase === 0) {
+    afterLayout(() => runMainDeckEnter());
   } else {
     requestAnimationFrame(() => syncCoachLayout());
   }

@@ -14,7 +14,20 @@ import {
   placeAtSchool,
 } from "./map-data.js";
 import { ICO, SCHOOL_ICON, actionIconHtml, goldCoinsHtml, actionCardsHtml } from "./icons.js";
+import { schoolRepTokenSrc, MAP_PREP_PAWN_ASSET_V } from "./map-prep-pawns.js";
 import { nowDoingGuideHtml, moveCostChooserHtml } from "./guide.js";
+import { MAP_FLAG } from "./map/constants.js";
+import { woodCardLayout } from "./map/wood-card-layout.js";
+import { mapSvgDefsHtml } from "./map/svg-defs.js";
+import { mapStageOpen, mapStageClose, mapWrapOpen, mapSvgOpen, mapSvgClose } from "./map/compose-stage.js";
+import { woodCardPanelSvg } from "./map/layers/wood-panel.js";
+import { woodCardSlotsSvg } from "./map/layers/card-slots.js";
+import { roundFlagSvg } from "./map/layers/round-flags.js";
+import { monsterLevelStacksSvg } from "./map/layers/monster-stacks.js";
+import { locationTokensAndFightDeckSvg } from "./map/layers/location-fight.js";
+import { goldBankAndDiceSvg } from "./map/layers/gold-dice.js";
+
+export { woodCardPanelSvg, woodCardSlotsSvg, roundFlagSvg, monsterLevelStacksSvg, locationTokensAndFightDeckSvg, goldBankAndDiceSvg };
 
 export const NOW_ACTIONS = [
   { id: "czekam", label: "Czeka" },
@@ -519,9 +532,11 @@ export function mapSvgHtml(
     popupHtml = null,
     setupCoachPhase = null,
     setupPreview = false,
+    setupMapPawns = false,
   } = {}
 ) {
-  const setupLite = setupPreview || setupCoachPhase != null;
+  const setupLite = (setupPreview || setupCoachPhase != null) && !setupMapPawns;
+  const setupFill = setupPreview || setupMapPawns || setupCoachPhase != null;
   const locMap = Object.fromEntries(LOCATIONS.map((l) => [l.id, l]));
   const fromId = highlightFromId || board.highlightFrom || null;
   const reachable = new Set(fromId ? neighborsOf(fromId) : []);
@@ -574,19 +589,39 @@ export function mapSvgHtml(
          </g>`
       : "";
 
+    const setupSchoolPawns =
+      setupMapPawns && loc.school
+        ? (roster || [])
+            .map((p, i) => ({ p, i }))
+            .filter(({ p }) => schoolStartId(p.schoolId) === loc.id)
+            .map(({ p, i }, idx) => {
+              const sid = p.schoolId || "wilk";
+              const ox = -2.6 + idx * 2.4;
+              const src = `${schoolRepTokenSrc(sid)}?v=${MAP_PREP_PAWN_ASSET_V}`;
+              return `<g class="map-setup-school-pawn" transform="translate(${loc.x + ox},${loc.y + 3.6})">
+            <circle r="2.05" fill="rgba(20,18,14,0.35)" stroke="#d4b05a" stroke-width="0.35"/>
+            <image class="map-setup-school-pawn__art" href="${src}" x="-1.85" y="-1.85" width="3.7" height="3.7" preserveAspectRatio="xMidYMid meet"/>
+            <text y="3.35" text-anchor="middle" class="map-badge-text map-setup-school-pawn__lbl">${escapeXml(String(i + 1))}</text>
+          </g>`;
+            })
+            .join("")
+        : "";
+
     /* Na polach szkół bez żetonów graczy — pozycja i tak wynika ze startu cechu. */
     const witchBadges =
-      setupLite || loc.school
-        ? ""
-        : witches
-            .map(({ i }, idx) => {
-              const ox = -3.2 + idx * 2.4;
-              return `<g transform="translate(${loc.x + ox},${loc.y + 4.4}) rotate(${labelUpright})">
+      setupSchoolPawns
+        ? setupSchoolPawns
+        : setupLite || loc.school
+          ? ""
+          : witches
+              .map(({ i }, idx) => {
+                const ox = -3.2 + idx * 2.4;
+                return `<g transform="translate(${loc.x + ox},${loc.y + 4.4}) rotate(${labelUpright})">
           <circle r="1.7" fill="#244833" stroke="#d4b05a" stroke-width="0.35"/>
           <text y="0.7" text-anchor="middle" class="map-badge-text">${i + 1}</text>
         </g>`;
-            })
-            .join("");
+              })
+              .join("");
 
     const disc = isWild
       ? `<circle class="map-node-soft" cx="${loc.x}" cy="${loc.y}" r="4.4" fill="#7a6b4a" opacity="0.2"/>
@@ -616,45 +651,12 @@ export function mapSvgHtml(
   }).join("");
 
   return `
-    <div class="map-stage${popupHtml ? " map-stage--has-popup" : ""}">
-      <div class="map-wrap" style="--map-rot:${rot}deg">
-        <svg class="map-svg" viewBox="-13 -12.5 ${MAP_FLAG.viewW + 13} 105.5" role="img" aria-label="Mapa obszarów">
-          <defs>
-            <linearGradient id="${uid}-land" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#8fa57a"/>
-              <stop offset="38%" stop-color="#c2b48a"/>
-              <stop offset="72%" stop-color="#9aaf7e"/>
-              <stop offset="100%" stop-color="#7e9470"/>
-            </linearGradient>
-            <radialGradient id="${uid}-mist" cx="50%" cy="42%" r="62%">
-              <stop offset="0%" stop-color="rgba(255,248,230,0.28)"/>
-              <stop offset="100%" stop-color="rgba(70,90,55,0.12)"/>
-            </radialGradient>
-            <radialGradient id="${uid}-water" cx="12%" cy="18%" r="28%">
-              <stop offset="0%" stop-color="rgba(70,120,150,0.28)"/>
-              <stop offset="100%" stop-color="rgba(70,120,150,0)"/>
-            </radialGradient>
-            <radialGradient id="${uid}-peak" cx="88%" cy="14%" r="24%">
-              <stop offset="0%" stop-color="rgba(210,215,220,0.35)"/>
-              <stop offset="100%" stop-color="rgba(210,215,220,0)"/>
-            </radialGradient>
-            <linearGradient id="${uid}-wood" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#6b4a2e"/>
-              <stop offset="35%" stop-color="#8a623c"/>
-              <stop offset="70%" stop-color="#734f30"/>
-              <stop offset="100%" stop-color="#5c3f28"/>
-            </linearGradient>
-            <linearGradient id="${uid}-wood-shine" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="rgba(255,230,190,0.14)"/>
-              <stop offset="45%" stop-color="rgba(255,230,190,0)"/>
-              <stop offset="100%" stop-color="rgba(30,18,8,0.18)"/>
-            </linearGradient>
-            <clipPath id="${uid}-shell">
-              <path d="${boardShellPath()}"/>
-            </clipPath>
-          </defs>
+    ${mapStageOpen({ setupFill, hasPopup: Boolean(popupHtml) })}
+      ${mapWrapOpen({ setupFill, rot })}
+      ${mapSvgOpen({ setupFill, uid })}
+          ${mapSvgDefsHtml(uid)}
           <g class="map-board-united" clip-path="url(#${uid}-shell)">
-            <g class="map-land">
+            <g class="map-land" data-map-layer="land">
               <rect class="map-board-face" x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-land)"/>
               <rect x="0.6" y="0.6" width="99.4" height="83.8" fill="url(#${uid}-mist)"/>
               <ellipse cx="14" cy="16" rx="22" ry="16" fill="url(#${uid}-water)"/>
@@ -663,7 +665,7 @@ export function mapSvgHtml(
               <g class="map-roads-under">${roadsUnder}</g>
               <g class="map-roads">${roads}</g>
               <g class="map-nodes">${nodes}</g>
-              ${setupLite ? "" : reputationTrackSvg(roster, board)}
+              ${setupLite && !setupMapPawns ? "" : reputationTrackSvg(roster, board, { useTokenArt: setupMapPawns })}
             </g>
             ${woodCardPanelSvg(uid)}
             ${woodCardSlotsSvg()}
@@ -672,458 +674,14 @@ export function mapSvgHtml(
             ${setupCoachPhase != null && setupCoachPhase >= 7 ? locationTokensAndFightDeckSvg() : ""}
           </g>
           ${setupCoachPhase != null && setupCoachPhase >= 8 ? goldBankAndDiceSvg() : ""}
-          <path class="map-board-outline" d="${boardShellPath()}" fill="none" stroke="#5a4530" stroke-width="0.55"/>
-        </svg>
-      </div>
-      ${
-        popupHtml
-          ? `<div class="map-loc-popup" id="map-loc-popup" role="dialog" aria-live="polite">${popupHtml}</div>`
-          : ""
-      }
-    </div>
+      ${mapSvgClose()}
+      ${mapStageClose({ popupHtml })}
     ${
       showDisclaimer
         ? `<p class="note">Schemat: numery 0–18, tereny i drogi.</p>`
         : ""
     }
   `;
-}
-
-/** Wspólne wymiary flag / desek. */
-const MAP_FLAG = {
-  yTop: 0.6,
-  w: 3.35,
-  h: 5.8,
-  notch: 0.85,
-  edgePad: 4.4,
-  woodX: 100,
-  woodW: 58.5,
-  get viewW() {
-    return this.woodX + this.woodW + 0.6;
-  },
-  get shellW() {
-    return this.woodX + this.woodW - 0.6;
-  },
-};
-
-/** Layout pól kart na deskach (współdzielony z flagą III / wcięciami). */
-function woodCardLayout() {
-  const { yTop, w: flagW, h: flagH, edgePad, woodX, woodW } = MAP_FLAG;
-  const tokenR = 2.2;
-  const colGap = 4.2;
-  const rightPad = 1.25;
-  const woodRight = woodX + woodW;
-  const leftSlotX = woodX + edgePad + flagW;
-  const slotW = (woodRight - rightPad - leftSlotX - colGap) / 2;
-  const leftSlotW = slotW;
-  const rightSlotX = leftSlotX + leftSlotW + colGap;
-  const rightSlotW = slotW;
-  const woodBottom = yTop + 83.8;
-  const rightTopStart = yTop + flagH - 1.15;
-  const bottomPad = edgePad;
-  const slotGap = 1.55;
-  const firstBreak = 3.4;
-  const rightCount = 7;
-  const rightAvail = woodBottom - bottomPad - rightTopStart;
-  const slotH = (rightAvail - firstBreak - (rightCount - 2) * slotGap) / rightCount;
-  return {
-    yTop,
-    flagW,
-    flagH,
-    edgePad,
-    woodX,
-    woodW,
-    woodRight,
-    tokenR,
-    rightPad,
-    leftSlotX,
-    leftSlotW,
-    rightSlotX,
-    rightSlotW,
-    slotX: leftSlotX,
-    slotW: leftSlotW,
-    slotH,
-    slotGap,
-    firstBreak,
-    rightTopStart,
-    woodBottom,
-    bottomPad,
-    rightCount,
-  };
-}
-
-/**
- * Malutkie wcięcia przy dolnej krawędzi (szerokość = karta).
- * Boczne ściany pod kątem 70° do poziomu → trapez (3 krawędzie + otwarte dół).
- */
-function bottomNotches() {
-  const { leftSlotX: lx, leftSlotW: lw, rightSlotX: rx, rightSlotW: rw } = woodCardLayout();
-  const depth = 1.45;
-  const angleDeg = 70;
-  const sideInset = depth / Math.tan((angleDeg * Math.PI) / 180);
-  const make = (x, w) => ({
-    x0: x, /* lewy dół */
-    x1: x + w, /* prawy dół — szerokość karty */
-    xt0: x + sideInset, /* lewy góra */
-    xt1: x + w - sideInset, /* prawy góra */
-    d: depth,
-  });
-  return [make(lx, lw), make(rx, rw)];
-}
-
-/** Fragment ścieżki wcięcia (idziemy wzdłuż dołu od prawej do lewej). */
-function notchPathSeg(n, y1) {
-  return [
-    `H${n.x1}`,
-    `L${n.xt1} ${y1 - n.d}`,
-    `H${n.xt0}`,
-    `L${n.x0} ${y1}`,
-  ].join(" ");
-}
-
-/** Obrys planszy z wcięciami pod kolumnami kart. */
-function boardShellPath() {
-  const x0 = 0.6;
-  const y0 = 0.6;
-  const x1 = x0 + MAP_FLAG.shellW;
-  const y1 = y0 + 83.8;
-  const [nL, nR] = bottomNotches();
-  return [`M${x0} ${y0}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x0}`, `Z`].join(
-    " "
-  );
-}
-
-/** Ścieżka samej strefy drewna (z tymi samymi wcięciami). */
-function woodFacePath() {
-  const { woodX: x, yTop: y, woodW: w } = woodCardLayout();
-  const y1 = y + 83.8;
-  const x1 = x + w;
-  const [nL, nR] = bottomNotches();
-  return [`M${x} ${y}`, `H${x1}`, `V${y1}`, notchPathSeg(nR, y1), notchPathSeg(nL, y1), `H${x}`, `Z`].join(" ");
-}
-
-/** Drewniane deski po prawej — złączone z mapą, wcięcia pod kolumnami kart. */
-export function woodCardPanelSvg(uid = "m") {
-  const { woodX: x, woodW: w, yTop: y } = woodCardLayout();
-  const h = 83.8;
-  const face = woodFacePath();
-  const notchD = bottomNotches()[0].d;
-  const plankH = h / 9;
-  const seams = Array.from({ length: 8 }, (_, i) => {
-    const yy = y + plankH * (i + 1);
-    if (yy > y + h - notchD - 0.3) return "";
-    return `<line class="map-wood-seam" x1="${x}" y1="${yy}" x2="${x + w}" y2="${yy}"/>`;
-  }).join("");
-  const grains = [0.12, 0.28, 0.47, 0.63]
-    .map(
-      (t, i) =>
-        `<path class="map-wood-grain" d="M${x + 1.2 + i * 0.15} ${y + h * t} Q${x + w * 0.45} ${y + h * t - 1.2}, ${x + w - 1.4} ${y + h * t + 0.6}" fill="none"/>`
-    )
-    .join("");
-  return `
-    <g class="map-wood-panel" aria-label="Stół na karty">
-      <path class="map-wood-face" d="${face}" fill="url(#${uid}-wood)"/>
-      <path d="${face}" fill="url(#${uid}-wood-shine)"/>
-      ${seams}
-      ${grains}
-      <line class="map-wood-join" x1="${x}" y1="${y}" x2="${x}" y2="${y + h}"/>
-    </g>`;
-}
-
-/**
- * 3+3 (lewa, górne z żetonami) + 7 (prawa) — wszystkie pola tej samej wielkości.
- */
-export function woodCardSlotsSvg() {
-  const {
-    yTop,
-    flagH,
-    tokenR,
-    leftSlotX,
-    leftSlotW,
-    rightSlotX,
-    rightSlotW,
-    slotH,
-    slotGap,
-    firstBreak,
-    rightTopStart,
-    woodBottom,
-    bottomPad,
-    rightCount,
-  } = woodCardLayout();
-  const topStart = yTop + flagH + 1.4; /* lewa kolumna pod flagą II */
-  const leftBottomH = 3 * slotH + 2 * slotGap;
-  const leftBottomStart = woodBottom - bottomPad - leftBottomH;
-
-  const diamondHtml = (x, y, w, h) => {
-    const cx = x + w / 2;
-    const cy = y + h / 2;
-    const rw = Math.min(w * 0.22, h * 0.55);
-    const rh = Math.min(h * 0.38, w * 0.16);
-    return `<path class="map-card-diamond" d="M${cx} ${cy - rh} L${cx + rw} ${cy} L${cx} ${cy + rh} L${cx - rw} ${cy} Z"/>`;
-  };
-
-  /* Od góry: las → woda → góry (pola żetonów przy 3 górnych kartach lewej kolumny). */
-  const CARD_TOKEN_TERRAINS = ["forest", "water", "mountain"];
-  const slotHtml = (i, x, y, w, h, withToken, withDiamond = false, terrain = null) => {
-    const token =
-      withToken
-        ? `<g class="map-token-slot" data-slot="card-token-${i}" data-terrain="${terrain || ""}" aria-label="Żeton obszaru — ${
-            terrain === "forest" ? "Las" : terrain === "water" ? "Woda" : terrain === "mountain" ? "Góry" : "Żeton"
-          }">
-          <circle class="map-token-slot-well" cx="${x + w}" cy="${y + h / 2}" r="${tokenR}"/>
-          <circle class="map-token-slot-lip" cx="${x + w}" cy="${y + h / 2}" r="${tokenR - 0.45}"/>
-        </g>`
-        : "";
-    return `
-      <g class="map-card-slot" data-slot="${i}"${terrain ? ` data-terrain="${terrain}"` : ""}>
-        <rect class="map-card-slot-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.5"/>
-        <rect class="map-card-slot-lip" x="${x + 0.35}" y="${y + 0.35}" width="${w - 0.7}" height="${h - 0.7}" rx="0.3"/>
-        ${withDiamond ? diamondHtml(x, y, w, h) : ""}
-        ${token}
-      </g>`;
-  };
-
-  const slots = [];
-  for (let i = 0; i < 3; i++) {
-    slots.push(
-      slotHtml(
-        i,
-        leftSlotX,
-        topStart + i * (slotH + slotGap),
-        leftSlotW,
-        slotH,
-        true,
-        false,
-        CARD_TOKEN_TERRAINS[i]
-      )
-    );
-  }
-  for (let i = 0; i < 3; i++) {
-    slots.push(
-      slotHtml(3 + i, leftSlotX, leftBottomStart + i * (slotH + slotGap), leftSlotW, slotH, false)
-    );
-  }
-  let rightY = rightTopStart;
-  for (let i = 0; i < rightCount; i++) {
-    slots.push(slotHtml(6 + i, rightSlotX, rightY, rightSlotW, slotH, false, i === 0));
-    if (i < rightCount - 1) rightY += slotH + (i === 0 ? firstBreak : slotGap);
-  }
-
-  /* Eliksiry — prawe wcięcie; trofea — lewe wcięcie */
-  const [nL, nR] = bottomNotches();
-  const notchSlot = (id, label, notch, extraClass) => {
-    const w = notch.x1 - notch.x0;
-    const h = Math.max(slotH * 0.72, notch.d * 4.2);
-    const x = notch.x0;
-    const y = woodBottom - notch.d;
-    return `
-      <g class="map-card-slot ${extraClass}" data-slot="${id}" aria-label="${label}">
-        <rect class="map-card-slot-well ${extraClass}-well" x="${x}" y="${y}" width="${w}" height="${h}" rx="0.45"/>
-        <rect class="map-card-slot-lip" x="${x + 0.3}" y="${y + 0.3}" width="${w - 0.6}" height="${h - 0.6}" rx="0.3"/>
-      </g>`;
-  };
-  slots.push(notchSlot("elixir", "Talia eliksirów", nR, "map-elixir-slot"));
-  slots.push(notchSlot("trophy", "Trofea atrybutów", nL, "map-trophy-slot"));
-
-  return `<g class="map-card-slots" aria-label="Pola na karty">${slots.join("")}</g>`;
-}
-
-/** Flagi I (mapa), II (lewa desek), III (prawa krawędź prawej kolumny kart). */
-export function roundFlagSvg(board = null) {
-  const active = String(board?.roundFlag || board?.pendingMonsterLevel || "I").toUpperCase();
-  const activeRoman =
-    active === "III" || active === "3" ? "III" : active === "II" || active === "2" ? "II" : "I";
-  const flags = monsterFlagLayout();
-  const { yTop, w, h, notch } = MAP_FLAG;
-  const cloth = (roman, x) => `
-    <g class="map-round-flag${roman === activeRoman ? " map-round-flag--active" : ""}" transform="translate(${x}, ${yTop})" aria-label="Poziom ${roman}">
-      <path class="map-round-flag-cloth" d="M0,0 L${w},0 L${w},${h - notch} L${w / 2},${h} L0,${h - notch} Z"/>
-      <text class="map-round-flag-num" x="${w / 2}" y="${h * 0.52}" text-anchor="middle" dominant-baseline="middle">${roman}</text>
-    </g>`;
-  return `<g class="map-round-flags">${flags.map((f) => cloth(f.roman, f.x)).join("")}</g>`;
-}
-
-function monsterFlagLayout() {
-  const { edgePad, woodX, w: flagW } = MAP_FLAG;
-  const { slotX, slotW } = woodCardLayout();
-  return [
-    { roman: "I", level: 1, x: edgePad },
-    { roman: "II", level: 2, x: woodX + edgePad },
-    { roman: "III", level: 3, x: slotX + slotW },
-  ].map((f) => ({ ...f, cx: f.x + flagW / 2 }));
-}
-
-function hexagonPath(cx, cy, r) {
-  const pts = [];
-  for (let i = 0; i < 6; i++) {
-    const a = ((Math.PI / 180) * (60 * i - 30));
-    pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
-  }
-  return `M${pts.join(" L")} Z`;
-}
-
-/**
- * Karty potworów (pionowo) nad flagami I/II/III + żetony-sześciokąty obok (I < II < III).
- */
-export function monsterLevelStacksSvg() {
-  const { yTop, w: flagW } = MAP_FLAG;
-  const { slotH } = woodCardLayout();
-  const cardW = Math.max(flagW * 1.85, 5.8);
-  const cardH = Math.max(slotH * 1.05, 7.2);
-  const tokenR = { 1: 2.05, 2: 2.55, 3: 3.15 };
-
-  const stacks = monsterFlagLayout().map((f) => {
-    const cardX = f.cx - cardW / 2;
-    const cardY = yTop - cardH - 0.35;
-    const tokenCx = f.cx + cardW / 2 + tokenR[f.level] + 0.85;
-    const tokenCy = cardY + cardH * 0.55;
-    return `
-      <g class="map-monster-stack" data-monster-level="${f.level}" data-slot="monster-${f.level}" aria-label="Potwory ${f.roman}">
-        <g class="map-card-slot map-monster-card-slot" data-slot="monster-card-${f.level}">
-          <rect class="map-card-slot-well map-monster-card-well" x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="0.45"/>
-          <rect class="map-card-slot-lip" x="${cardX + 0.28}" y="${cardY + 0.28}" width="${cardW - 0.56}" height="${cardH - 0.56}" rx="0.3"/>
-          <text class="map-monster-card-lvl" x="${f.cx}" y="${cardY + cardH * 0.52}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
-        </g>
-        <g class="map-monster-token" data-slot="monster-token-${f.level}" data-token-level="${f.level}">
-          <path class="map-monster-token-well" d="${hexagonPath(tokenCx, tokenCy, tokenR[f.level])}"/>
-          <text class="map-monster-token-num" x="${tokenCx}" y="${tokenCy + 0.15}" text-anchor="middle" dominant-baseline="middle">${f.roman}</text>
-        </g>
-      </g>`;
-  });
-
-  return `<g class="map-monster-stacks" aria-label="Stosy potworów I–III">${stacks.join("")}</g>`;
-}
-
-/**
- * Nad mapą, od prawej krawędzi mapy: talia walki potworów + 3 stosy żetonów obszarów.
- */
-export function locationTokensAndFightDeckSvg() {
-  const { yTop, woodX } = MAP_FLAG;
-  const fightW = 7.6;
-  const fightH = 10.6;
-  const mapGap = 0.2;
-  const rightPad = 0.35;
-  const fightX = woodX - fightW - rightPad;
-  const fightY = yTop - fightH - mapGap;
-
-  const r = 3.15;
-  const img = 4.5;
-  const tokenGap = 7.05;
-  const tokenRight = fightX - 0.85 - r;
-  const terrains = [
-    { id: "forest", label: "Las", file: "forest" },
-    { id: "mountain", label: "Góry", file: "mountain" },
-    { id: "water", label: "Woda", file: "water" },
-  ].map((t, i, arr) => ({
-    ...t,
-    x: tokenRight - (arr.length - 1 - i) * tokenGap,
-  }));
-  const cy = yTop - r - mapGap;
-
-  const tokens = terrains
-    .map(
-      (t) => `
-      <g class="map-loc-token-stack" data-slot="loc-token-${t.id}" data-terrain="${t.id}" aria-label="Żetony obszarów — ${t.label}">
-        <circle class="map-loc-token-well" cx="${t.x}" cy="${cy}" r="${r}" fill="none"/>
-        <image href="./img/terrain/${t.file}.png" x="${t.x - img / 2}" y="${cy - img / 2}" width="${img}" height="${img}" preserveAspectRatio="xMidYMid meet"/>
-      </g>`
-    )
-    .join("");
-
-  const fight = `
-    <g class="map-card-slot map-fight-deck-slot" data-slot="monster-fight" aria-label="Talia walki potworów">
-      <rect class="map-card-slot-well map-fight-deck-well" x="${fightX}" y="${fightY}" width="${fightW}" height="${fightH}" rx="0.5"/>
-      <rect class="map-card-slot-lip" x="${fightX + 0.3}" y="${fightY + 0.3}" width="${fightW - 0.6}" height="${fightH - 0.6}" rx="0.35"/>
-      <text class="map-fight-deck-label" x="${fightX + fightW / 2}" y="${fightY + fightH * 0.52}" text-anchor="middle" dominant-baseline="middle">⚔</text>
-    </g>`;
-
-  return `<g class="map-loc-fight-setup" aria-label="Żetony obszarów i talia walki">${tokens}${fight}</g>`;
-}
-
-/**
- * Po lewej obok mapy, u góry: kości do gry, pod nimi bank mini-monet.
- */
-export function goldBankAndDiceSvg() {
-  const { yTop } = woodCardLayout();
-  const cx = -6.2;
-  const dieSize = 2.85;
-  const dieGap = 0.38;
-  const step = dieSize + dieGap;
-  const diceY0 = yTop + 1.15;
-  const diceCells = [
-    [-1, 0],
-    [0, 0],
-    [1, 0],
-    [-0.5, 1],
-    [0.5, 1],
-  ];
-  const pip = (x, y) =>
-    `<circle class="map-die-pip" cx="${x}" cy="${y}" r="0.26"/>`;
-  const pipLayouts = [
-    [[0.5, 0.5]],
-    [
-      [0.28, 0.28],
-      [0.72, 0.72],
-    ],
-    [
-      [0.28, 0.28],
-      [0.5, 0.5],
-      [0.72, 0.72],
-    ],
-    [
-      [0.28, 0.28],
-      [0.72, 0.28],
-      [0.28, 0.72],
-      [0.72, 0.72],
-    ],
-    [
-      [0.28, 0.28],
-      [0.72, 0.28],
-      [0.5, 0.5],
-      [0.28, 0.72],
-      [0.72, 0.72],
-    ],
-  ];
-  const dice = diceCells
-    .map(([gx, gy], i) => {
-      const x = cx + gx * step - dieSize / 2;
-      const y = diceY0 + gy * step;
-      const pips = pipLayouts[i]
-        .map(([px, py]) => pip(x + dieSize * px, y + dieSize * py))
-        .join("");
-      return `
-      <g class="map-die-slot" data-slot="die-${i}" data-die="${i}">
-        <rect class="map-die-well" x="${x}" y="${y}" width="${dieSize}" height="${dieSize}" rx="0.45"/>
-        ${pips}
-      </g>`;
-    })
-    .join("");
-
-  const goldR = 2.05;
-  const goldCy = diceY0 + 2 * step + goldR + 1.35;
-  const goldOffsets = [
-    [-1.55, -0.55],
-    [1.35, -0.75],
-    [-0.15, 0.95],
-    [1.65, 0.85],
-    [-1.7, 1.15],
-  ];
-  const golds = goldOffsets
-    .map(
-      ([dx, dy], i) => `
-      <g class="map-gold-coin" data-gold="${i}" transform="translate(${cx + dx}, ${goldCy + dy})">
-        <circle class="map-gold-coin-outer" r="${goldR}"/>
-        <circle class="map-gold-coin-inner" r="${goldR * 0.58}"/>
-        <text class="map-gold-coin-mark" text-anchor="middle" dominant-baseline="middle">zł</text>
-      </g>`
-    )
-    .join("");
-
-  return `
-    <g class="map-gold-dice-setup" aria-label="Bank złota i kości">
-      <g class="map-dice-tray" data-slot="dice-tray" aria-label="Kości do gry">${dice}</g>
-      <g class="map-gold-bank" data-slot="gold-bank" aria-label="Bank złota">${golds}</g>
-    </g>`;
 }
 
 /** Kolory cech na torze reputacji (jak medaliony). */
@@ -1144,7 +702,7 @@ function schoolRepFill(schoolId) {
  * Tor reputacji 0–4 w lewym dolnym rogu (pionowo).
  * Domyślnie: kolor ostatniego, kto zdobył poziom; hover: animacja pozostałych na poziomie.
  */
-export function reputationTrackSvg(roster = [], board = null) {
+export function reputationTrackSvg(roster = [], board = null, { useTokenArt = false } = {}) {
   const cy0 = 80.6; /* 0 — dół */
   const edgePad = 85 - cy0; /* ten sam odstęp od lewej co od dołu */
   const cx = edgePad;
@@ -1171,9 +729,11 @@ export function reputationTrackSvg(roster = [], board = null) {
         ? present.filter((p) => p.i !== leadPlayer.i)
         : present;
       const lead =
-        leadSchool
-          ? `<circle class="map-rep-lead map-rep-pawn-disc" cx="${cx}" cy="${cy}" r="1.9" fill="${schoolRepFill(leadSchool)}"/>`
-          : "";
+        leadSchool && useTokenArt
+          ? `<image class="map-rep-token-art map-rep-lead" href="${schoolRepTokenSrc(leadSchool)}?v=${MAP_PREP_PAWN_ASSET_V}" x="${cx - 1.95}" y="${cy - 1.95}" width="3.9" height="3.9" preserveAspectRatio="xMidYMid meet"/>`
+          : leadSchool
+            ? `<circle class="map-rep-lead map-rep-pawn-disc" cx="${cx}" cy="${cy}" r="1.9" fill="${schoolRepFill(leadSchool)}"/>`
+            : "";
       /* Pozycje wachlarza w jednostkach SVG — CSS tylko opacity/scale (bez translate). */
       const othersHtml = others
         .map(({ i, schoolId }, idx) => {
@@ -1181,7 +741,11 @@ export function reputationTrackSvg(roster = [], board = null) {
           const oy = -idx * 0.55;
           return `
         <g class="map-rep-other" style="--i:${idx}" transform="translate(${cx + ox}, ${cy + oy})" data-player="${i}">
-          <circle class="map-rep-pawn-disc" r="1.35" fill="${schoolRepFill(schoolId)}" cx="0" cy="0"/>
+          ${
+            useTokenArt
+              ? `<image class="map-rep-token-art" href="${schoolRepTokenSrc(schoolId)}?v=${MAP_PREP_PAWN_ASSET_V}" x="-1.35" y="-1.35" width="2.7" height="2.7" preserveAspectRatio="xMidYMid meet"/>`
+              : `<circle class="map-rep-pawn-disc" r="1.35" fill="${schoolRepFill(schoolId)}" cx="0" cy="0"/>`
+          }
         </g>`;
         })
         .join("");
